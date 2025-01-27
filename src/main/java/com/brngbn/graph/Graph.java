@@ -8,47 +8,61 @@ import java.util.*;
 @Getter
 public class Graph {
     private Map<String, List<String>> adjacencyList;        // default: when reading the graph config file
-    private final List<String> nodeList;
-    private final List<Edge> edgeList;
-    private int[][] adjacencyMatrix;
 
     public Graph() {
         adjacencyList = new HashMap<>();
-        nodeList = new ArrayList<>();
-        edgeList = new ArrayList<>();
     }
 
     public void readGraphConfig(String fileName) throws IOException {
         GraphConfigReader.initialize();
         GraphConfigReader.getInstance().readGraphConfig(fileName);
         adjacencyList = GraphConfigReader.getInstance().getAdjacencyList();
-        buildNodeAndEdgeLists();
-        buildAdjacencyMatrix();
     }
 
-    private void buildNodeAndEdgeLists() {
+    public List<String> getNodeList() {
+        return new ArrayList<>(adjacencyList.keySet());
+    }
+
+    public List<Edge> getEdgeList() {
+        List<Edge> edgeList = new ArrayList<>();
         for (Map.Entry<String, List<String>> entry : adjacencyList.entrySet()) {
-            String node = entry.getKey();
-            nodeList.add(node);
+            String source = entry.getKey();
             for (String destination : entry.getValue()) {
-                edgeList.add(new Edge(node, destination));
+                edgeList.add(new Edge(source, destination));
             }
         }
+        return edgeList;
     }
 
-    private void buildAdjacencyMatrix() {
-        int size = nodeList.size();
-        adjacencyMatrix = new int[size][size];
-        Map<String, Integer> nodeIndexMap = new HashMap<>();
-        for (int i = 0; i < size; i++) {
-            nodeIndexMap.put(nodeList.get(i), i);
-        }
-        for (Edge edge : edgeList) {
-            int sourceIndex = nodeIndexMap.get(edge.source());
-            int destinationIndex = nodeIndexMap.get(edge.destination());
-            adjacencyMatrix[sourceIndex][destinationIndex] = 1;
-        }
+    public boolean hasNode(String node) {
+        return adjacencyList.containsKey(node);
     }
 
-    public record Edge(String source, String destination) { }
+    public boolean hasEdge(String source, String destination) {
+        return adjacencyList.containsKey(source) && adjacencyList.get(source).contains(destination);
+    }
+
+    public boolean hasEdge (Edge edge) {
+        return adjacencyList.containsKey(edge.source()) && adjacencyList.get(edge.source()).contains(edge.destination());
+    }
+
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        for (Map.Entry<String, List<String>> entry : adjacencyList.entrySet()) {
+            sb.append(entry.getKey()).append(":");
+            for (String edge : entry.getValue()) {
+                sb.append(" -> ").append(edge);
+            }
+            sb.append("\n");
+        }
+        return sb.toString();
+    }
+
+    public record Edge(String source, String destination) {
+        @Override
+        public String toString() {
+            return source + " -> " + destination;
+        }
+    }
 }
