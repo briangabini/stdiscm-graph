@@ -42,5 +42,9 @@ public class Graph {
         return adjacencyList.containsKey(source) && adjacencyList.get(source).contains(destination);
     }
 
+    public boolean hasEdge (Edge edge) {
+        return adjacencyList.containsKey(edge.source()) && adjacencyList.get(edge.source()).contains(edge.destination());
+    }
+
     public record Edge(String source, String destination) { }
 }
