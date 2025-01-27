@@ -46,5 +46,18 @@ public class Graph {
         return adjacencyList.containsKey(edge.source()) && adjacencyList.get(edge.source()).contains(edge.destination());
     }
 
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        for (Map.Entry<String, List<String>> entry : adjacencyList.entrySet()) {
+            sb.append(entry.getKey()).append(":");
+            for (String edge : entry.getValue()) {
+                sb.append(" -> ").append(edge);
+            }
+            sb.append("\n");
+        }
+        return sb.toString();
+    }
+
     public record Edge(String source, String destination) { }
 }
