@@ -1,7 +1,7 @@
 package com.brngbn;
 
 import com.brngbn.console.MainConsole;
-import com.brngbn.graph.Graph;
+import com.brngbn.graph.GraphImpl;
 
 import java.io.FileWriter;
 import java.io.IOException;
@@ -18,7 +18,7 @@ public class Main {
             fileName = scanner.nextLine();
         }
 
-        Graph graph = new Graph();
+        GraphImpl graph = new GraphImpl();
         try {
             graph.readGraphConfig(fileName);
             MainConsole.handleUserQueries(graph);

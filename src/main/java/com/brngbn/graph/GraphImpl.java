@@ -6,10 +6,10 @@ import java.io.IOException;
 import java.util.*;
 
 @Getter
-public class Graph {
+public class GraphImpl {
     private Map<String, List<String>> adjacencyList;        // default: when reading the graph config file
 
-    public Graph() {
+    public GraphImpl() {
         adjacencyList = new HashMap<>();
     }
 
