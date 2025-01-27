@@ -1,11 +1,11 @@
 package com.brngbn.console;
 
-import com.brngbn.graph.Graph;
+import com.brngbn.graph.GraphImpl;
 
 import java.util.Scanner;
 
 public class MainConsole {
-    public static void handleUserQueries(Graph graph) {
+    public static void handleUserQueries(GraphImpl graph) {
         asciiHeader();
 
         Scanner scanner = new Scanner(System.in);
