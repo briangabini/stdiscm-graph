@@ -7,24 +7,6 @@ public class GraphPrinter {
     public static void printGraph(Graph graph) {
         System.out.println("Adjacency List:");
         printAdjacencyList(graph.getAdjacencyList());
-
-        System.out.println("Node List:");
-        for (String node : graph.getNodeList()) {
-            System.out.println(node);
-        }
-
-        System.out.println("Edge List:");
-        for (Graph.Edge edge : graph.getEdgeList()) {
-            System.out.println(edge.source() + " -> " + edge.destination());
-        }
-
-        System.out.println("Adjacency Matrix:");
-        for (int[] row : graph.getAdjacencyMatrix()) {
-            for (int val : row) {
-                System.out.print(val + " ");
-            }
-            System.out.println();
-        }
     }
 
     private static void printAdjacencyList(Map<String, List<String>> adjacencyList) {
