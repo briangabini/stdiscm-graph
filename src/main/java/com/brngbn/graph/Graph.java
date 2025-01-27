@@ -59,5 +59,10 @@ public class Graph {
         return sb.toString();
     }
 
-    public record Edge(String source, String destination) { }
+    public record Edge(String source, String destination) {
+        @Override
+        public String toString() {
+            return source + " -> " + destination;
+        }
+    }
 }

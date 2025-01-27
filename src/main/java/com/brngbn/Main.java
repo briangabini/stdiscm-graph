@@ -2,7 +2,6 @@ package com.brngbn;
 
 import com.brngbn.console.MainConsole;
 import com.brngbn.graph.Graph;
-import com.brngbn.graph.GraphPrinter;
 
 import java.io.FileWriter;
 import java.io.IOException;
@@ -22,7 +21,7 @@ public class Main {
         Graph graph = new Graph();
         try {
             graph.readGraphConfig(fileName);
-            GraphPrinter.printGraph(graph);
+            System.out.println(graph);
             MainConsole.handleUserQueries(graph);
         } catch (IOException e) {
             e.printStackTrace();
