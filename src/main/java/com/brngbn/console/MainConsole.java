@@ -6,6 +6,8 @@ import java.util.Scanner;
 
 public class MainConsole {
     public static void handleUserQueries(Graph graph) {
+        asciiHeader();
+
         Scanner scanner = new Scanner(System.in);
         while (true) {
             System.out.print("Enter your query: ");
@@ -40,5 +42,14 @@ public class MainConsole {
                 System.out.println("Invalid query.");
             }
         }
+    }
+
+    private static void asciiHeader() {
+        System.out.println("   _____ _____            _____  _    _  _____ ______          _____   _____ _    _ ");
+        System.out.println("  / ____|  __ \\     /\\   |  __ \\| |  | |/ ____|  ____|   /\\   |  __ \\ / ____| |  | |");
+        System.out.println(" | |  __| |__) |   /  \\  | |__) | |__| | (___ | |__     /  \\  | |__) | |    | |__| |");
+        System.out.println(" | | |_ |  _  /   / /\\ \\ |  ___/|  __  |\\___ \\|  __|   / /\\ \\ |  _  /| |    |  __  |");
+        System.out.println(" | |__| | | \\ \\  / ____ \\| |    | |  | |____) | |____ / ____ \\| | \\ \\| |____| |  | |");
+        System.out.println("  \\_____|_|  \\_\\/_/    \\_\\_|    |_|  |_|_____/|______/_/    \\_\\_|  \\_\\\\_____|_|  |_|");
     }
 }

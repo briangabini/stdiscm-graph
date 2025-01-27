@@ -21,7 +21,6 @@ public class Main {
         Graph graph = new Graph();
         try {
             graph.readGraphConfig(fileName);
-            System.out.println(graph);
             MainConsole.handleUserQueries(graph);
         } catch (IOException e) {
             e.printStackTrace();
