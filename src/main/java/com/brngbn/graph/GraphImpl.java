@@ -59,6 +59,15 @@ public class GraphImpl {
         return sb.toString();
     }
 
+    // print methods
+    public void printNodes() {
+        System.out.println("Nodes: " + getNodeList());
+    }
+
+    public void printEdges() {
+        System.out.println("Edges: " + getEdgeList());
+    }
+
     public record Edge(String source, String destination) {
         @Override
         public String toString() {

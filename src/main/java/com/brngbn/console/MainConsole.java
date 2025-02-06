@@ -5,42 +5,52 @@ import com.brngbn.graph.GraphImpl;
 import java.util.Scanner;
 
 public class MainConsole {
+
     public static void handleUserQueries(GraphImpl graph) {
         asciiHeader();
-
         Scanner scanner = new Scanner(System.in);
+
         while (true) {
             System.out.print("Enter your query: ");
             String query = scanner.nextLine();
+
             if (query.equals("exit")) {
                 break;
-            } else if (query.equals("nodes")) {
-                System.out.println("Nodes: " + graph.getNodeList());
-            } else if (query.startsWith("node ")) {
-                String node = query.substring(5);
-                if (graph.hasNode(node)) {
-                    System.out.println("Node " + node + " is in the graph.");
-                } else {
-                    System.out.println("Node " + node + " is not in the graph.");
-                }
-            } else if (query.equals("edges")) {
-                System.out.println("Edges: " + graph.getEdgeList());
-            } else if (query.startsWith("edge ")) {
-                String[] parts = query.substring(5).split(" ");
-                if (parts.length == 2) {
-                    String source = parts[0];
-                    String destination = parts[1];
-                    if (graph.hasEdge(source, destination)) {
-                        System.out.println("Edge (" + source + ", " + destination + ") is in the graph.");
-                    } else {
-                        System.out.println("Edge (" + source + ", " + destination + ") is not in the graph.");
-                    }
-                } else {
-                    System.out.println("Invalid query format for edge.");
-                }
-            } else {
-                System.out.println("Invalid query.");
             }
+
+            processQuery(query, graph);
+        }
+    }
+
+    private static void processQuery(String query, GraphImpl graph) {
+        if (query.equals("nodes")) {
+            graph.printNodes();
+        } else if (query.startsWith("node ")) {
+            handleNodeQuery(query.substring(5), graph);
+        } else if (query.equals("edges")) {
+            graph.printEdges();
+        } else if (query.startsWith("edge ")) {
+            handleEdgeQuery(query.substring(5), graph);
+        } else {
+            System.out.println("Invalid query.");
+        }
+    }
+
+    private static void handleNodeQuery(String node, GraphImpl graph) {
+        System.out.println("Node " + node + (graph.hasNode(node) ? " is" : " is not") + " in the graph.");
+    }
+
+    private static void handleEdgeQuery(String edgeQuery, GraphImpl graph) {
+        String[] parts = edgeQuery.split(" ");
+        if (parts.length == 2) {
+            String source = parts[0];
+            String destination = parts[1];
+            String message = graph.hasEdge(source, destination) ?
+                "Edge (" + source + ", " + destination + ") is in the graph." :
+                "Edge (" + source + ", " + destination + ") is not in the graph.";
+            System.out.println(message);
+        } else {
+            System.out.println("Invalid query format for edge.");
         }
     }
 
