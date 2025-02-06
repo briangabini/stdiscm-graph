@@ -2,9 +2,17 @@ package com.brngbn.graph;
 
 import org.graphstream.graph.Graph;
 import org.graphstream.graph.implementations.*;
+import org.graphstream.stream.file.FileSinkDOT;
+import org.graphstream.stream.file.FileSinkImages;
 import org.graphstream.ui.view.Viewer;
 
+import java.io.IOException;
+
+import static org.graphstream.stream.file.FileSinkImages.*;
+
 public class GraphVisualizer {
+
+    private static final boolean saveToFile = true;
 
     public static void visualizeGraph(GraphImpl graph) {
         System.setProperty("org.graphstream.ui.renderer", "org.graphstream.ui.j2dviewer.J2DGraphRenderer");
@@ -27,5 +35,24 @@ public class GraphVisualizer {
 
         Viewer viewer = g.display();
         viewer.enableAutoLayout();
+
+        if (saveToFile) {
+            saveGraphToFile(g, "graph.png");
+        }
+    }
+
+    public static void saveGraphToFile(Graph graph, String fileName) {
+        FileSinkImages fileSink = new FileSinkImages();
+        fileSink.setResolution(800, 800);
+        fileSink.setQuality(Quality.HIGH);
+        fileSink.setLayoutPolicy(LayoutPolicy.COMPUTED_FULLY_AT_NEW_IMAGE);
+        fileSink.setAutofit(true);
+
+
+        try {
+            fileSink.writeAll(graph, fileName);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 }
