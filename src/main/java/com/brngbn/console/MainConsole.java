@@ -11,7 +11,7 @@ import java.util.Scanner;
 @Slf4j
 public class MainConsole {
 
-    private static boolean debug = true;
+    private static final boolean debug = true;
 
     public static void handleUserQueries(GraphImpl graph) {
         asciiHeader();
@@ -25,22 +25,13 @@ public class MainConsole {
                 break;
             }
 
-            long startTime = System.currentTimeMillis();
+
 
             processQuery(query, graph);
 
-            long endTime = System.currentTimeMillis();
-            long duration = endTime - startTime;
 
-            if (debug) {
-                log.debug("Query took {} milliseconds to process.", duration);
-                // sleep main
-                try {
-                    Thread.sleep(100);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-            }
+
+
         }
     }
 
@@ -61,31 +52,49 @@ public class MainConsole {
         else {
             System.out.println("Invalid query.");
         }
-     }
+    }
 
-     private static void handlePathQuery(String pathQuery, GraphImpl graph) {
+    private static void handlePathQuery(String pathQuery, GraphImpl graph) {
+        long duration = 0;
+
         String[] parts = pathQuery.split(" ");
-         if (parts.length == 3) {
-             String source = parts[1];
-             String dest = parts[2];
-             PathFinder pathFinder = new DfsPathFinder();
-             List<List<GraphImpl.Edge>> paths = pathFinder.findPaths(graph, source, dest);
+        if (parts.length == 3) {
+            String source = parts[1];
+            String dest = parts[2];
+            PathFinder pathFinder = new DfsPathFinder();
 
-             if (paths.isEmpty()) {
-                 System.out.println("No path found between " + source + " and " + dest);
-             } else {
-                 System.out.println("Path between " + source + " and " + dest + ":");
-                 for (List<GraphImpl.Edge> path : paths) {
-                     for (GraphImpl.Edge edge : path) {
-                         System.out.print("(" + edge + ") ");
-                     }
-                     System.out.println();
-                 }
-             }
-         } else {
-             System.out.println("Invalid query format for path.");
-         }
-     }
+            long startTime = System.currentTimeMillis();
+
+            List<List<GraphImpl.Edge>> paths = pathFinder.findPaths(graph, source, dest);
+
+            long endTime = System.currentTimeMillis();
+            duration = endTime - startTime;
+
+            if (paths.isEmpty()) {
+                System.out.println("No path found between " + source + " and " + dest);
+            } else {
+                System.out.println("Path between " + source + " and " + dest + ":");
+                for (List<GraphImpl.Edge> path : paths) {
+                    for (GraphImpl.Edge edge : path) {
+                        System.out.print("(" + edge + ") ");
+                    }
+                    System.out.println();
+                }
+            }
+        } else {
+            System.out.println("Invalid query format for path.");
+        }
+
+        if (debug) {
+            log.debug("Query took {} milliseconds to process.", duration);
+            // sleep main
+            try {
+                Thread.sleep(100);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+    }
 
     private static void handleNodeQuery(String node, GraphImpl graph) {
         System.out.println("Node " + node + (graph.hasNode(node) ? " is" : " is not") + " in the graph.");
@@ -97,8 +106,8 @@ public class MainConsole {
             String source = parts[0];
             String destination = parts[1];
             String message = graph.hasEdge(source, destination) ?
-                "Edge (" + source + ", " + destination + ") is in the graph." :
-                "Edge (" + source + ", " + destination + ") is not in the graph.";
+                    "Edge (" + source + ", " + destination + ") is in the graph." :
+                    "Edge (" + source + ", " + destination + ") is not in the graph.";
             System.out.println(message);
         } else {
             System.out.println("Invalid query format for edge.");

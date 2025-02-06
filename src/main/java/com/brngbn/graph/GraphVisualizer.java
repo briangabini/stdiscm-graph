@@ -1,14 +1,14 @@
 package com.brngbn.graph;
 
 import org.graphstream.graph.Graph;
-import org.graphstream.graph.implementations.*;
-import org.graphstream.stream.file.FileSinkDOT;
+import org.graphstream.graph.implementations.SingleGraph;
 import org.graphstream.stream.file.FileSinkImages;
 import org.graphstream.ui.view.Viewer;
 
 import java.io.IOException;
 
-import static org.graphstream.stream.file.FileSinkImages.*;
+import static org.graphstream.stream.file.FileSinkImages.LayoutPolicy;
+import static org.graphstream.stream.file.FileSinkImages.Quality;
 
 public class GraphVisualizer {
 
