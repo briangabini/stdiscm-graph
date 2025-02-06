@@ -11,20 +11,20 @@ import java.util.List;
 import java.util.Map;
 
 @Getter
-public class GraphConfigReader {
+public class GraphConfigParser {
     private final Map<String, List<String>> adjacencyList;
 
     // Constants
-    private static GraphConfigReader sharedInstance;
+    private static GraphConfigParser sharedInstance;
     private static final String DIRECTORY = "src/main/java/com/brngbn/test_cases/";
 
-    public GraphConfigReader() {
+    public GraphConfigParser() {
         adjacencyList = new HashMap<>();
     }
 
     public static void initialize() {
         if (sharedInstance == null) {
-            sharedInstance = new GraphConfigReader();
+            sharedInstance = new GraphConfigParser();
         }
     }
 
@@ -32,7 +32,7 @@ public class GraphConfigReader {
         sharedInstance = null;
     }
 
-    public static GraphConfigReader getInstance() {
+    public static GraphConfigParser getInstance() {
         if (sharedInstance == null) {
             throw new IllegalStateException("GraphConfigReader is not initialized. Call initialize() first.");
         }

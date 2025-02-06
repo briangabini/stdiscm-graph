@@ -14,9 +14,9 @@ public class GraphImpl {
     }
 
     public void readGraphConfig(String fileName) throws IOException {
-        GraphConfigReader.initialize();
-        GraphConfigReader.getInstance().readGraphConfig(fileName);
-        adjacencyList = GraphConfigReader.getInstance().getAdjacencyList();
+        GraphConfigParser.initialize();
+        GraphConfigParser.getInstance().readGraphConfig(fileName);
+        adjacencyList = GraphConfigParser.getInstance().getAdjacencyList();
     }
 
     public List<String> getNodeList() {
