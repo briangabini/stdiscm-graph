@@ -23,6 +23,8 @@ public class MainConsole {
     }
 
     private static void processQuery(String query, GraphImpl graph) {
+        query = query.trim();
+
         if (query.equals("nodes")) {
             graph.printNodes();
         } else if (query.startsWith("node ")) {
@@ -31,10 +33,24 @@ public class MainConsole {
             graph.printEdges();
         } else if (query.startsWith("edge ")) {
             handleEdgeQuery(query.substring(5), graph);
-        } else {
+        } else if (query.startsWith("path ")) {
+            handlePathQuery(query, graph);
+        }
+        else {
             System.out.println("Invalid query.");
         }
-    }
+     }
+
+     private static void handlePathQuery(String pathQuery, GraphImpl graph) {
+        String[] parts = pathQuery.split(" ");
+         if (parts.length == 3) {
+             String source = parts[1];
+             String destination = parts[2];
+             // graph.printPath(source, destination);
+         } else {
+             System.out.println("Invalid query format for path.");
+         }
+     }
 
     private static void handleNodeQuery(String node, GraphImpl graph) {
         System.out.println("Node " + node + (graph.hasNode(node) ? " is" : " is not") + " in the graph.");
