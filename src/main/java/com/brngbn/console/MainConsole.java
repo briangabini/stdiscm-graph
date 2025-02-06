@@ -50,16 +50,19 @@ public class MainConsole {
              String source = parts[1];
              String dest = parts[2];
              PathFinder pathFinder = new DfsPathFinder();
-             List<GraphImpl.Edge> paths = pathFinder.findPath(graph, source, dest);
+             List<List<GraphImpl.Edge>> paths = pathFinder.findPaths(graph, source, dest);
 
-                if (paths.isEmpty()) {
-                    System.out.println("No path found between " + source + " and " + dest);
-                } else {
-                    System.out.println("Path between " + source + " and " + dest + ":");
-                    for (GraphImpl.Edge edge : paths) {
-                        System.out.println(edge);
-                    }
-                }
+             if (paths.isEmpty()) {
+                 System.out.println("No path found between " + source + " and " + dest);
+             } else {
+                 System.out.println("Path between " + source + " and " + dest + ":");
+                 for (List<GraphImpl.Edge> path : paths) {
+                     for (GraphImpl.Edge edge : path) {
+                         System.out.print(edge + " ");
+                     }
+                     System.out.println();
+                 }
+             }
          } else {
              System.out.println("Invalid query format for path.");
          }

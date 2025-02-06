@@ -5,5 +5,5 @@ import com.brngbn.graph.GraphImpl;
 import java.util.List;
 
 public interface PathFinder {
-    public List<GraphImpl.Edge> findPath(GraphImpl graph, String source, String destination);
+    public List<List<GraphImpl.Edge>> findPaths(GraphImpl graph, String source, String destination);
 }

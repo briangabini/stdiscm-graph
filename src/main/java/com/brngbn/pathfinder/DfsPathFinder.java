@@ -10,7 +10,7 @@ import java.util.Map;
 public class DfsPathFinder implements PathFinder {
 
     @Override
-    public List<GraphImpl.Edge> findPath(GraphImpl graph, String source, String dest) {
+    public List<List<GraphImpl.Edge>> findPaths(GraphImpl graph, String source, String dest) {
         Map<String, Integer> nodeIndexMap = new HashMap<>();
         List<String> nodeList = graph.getNodeList();
         for (int i = 0; i < nodeList.size(); i++) {
@@ -19,39 +19,33 @@ public class DfsPathFinder implements PathFinder {
 
         int adjListSize = graph.getAdjacencyList().size();
         boolean[] visited = new boolean[adjListSize];
-        List<GraphImpl.Edge> path = new ArrayList<>();
+        List<List<GraphImpl.Edge>> allPaths = new ArrayList<>();
+        List<GraphImpl.Edge> currentPath = new ArrayList<>();
 
-        DFSRec(graph.getAdjacencyList(),
-                visited,
-                nodeIndexMap.get(source),
-                nodeIndexMap.get(dest),
-                path,
-                nodeList);
+        DFSRec(graph.getAdjacencyList(), visited, nodeIndexMap.get(source), nodeIndexMap.get(dest), currentPath, nodeList, allPaths);
 
-        return path;
+        return allPaths;
     }
 
     // Recursive function for DFS traversal
-    static boolean DFSRec(Map<String, List<String>> adj, boolean[] visited, int sourceIndex, int destinationIndex, List<GraphImpl.Edge> path, List<String> nodes) {
-        // Mark the current vertex as visited
+    private static void DFSRec(Map<String, List<String>> adj, boolean[] visited, int sourceIndex, int destinationIndex, List<GraphImpl.Edge> currentPath, List<String> nodes, List<List<GraphImpl.Edge>> allPaths) {
         visited[sourceIndex] = true;
 
-        // If the source is the destination, return true
         if (sourceIndex == destinationIndex) {
-            return true;
+            allPaths.add(new ArrayList<>(currentPath));
+            visited[sourceIndex] = false;
+            return;
         }
 
-        // Recursively visit all adjacent vertices that are not visited yet
+        // Recursively visit all adjacent nodes that are not visited yet
         for (String neighbor : adj.get(nodes.get(sourceIndex))) {
             int neighborIndex = nodes.indexOf(neighbor);
             if (!visited[neighborIndex]) {
-                path.add(new GraphImpl.Edge(nodes.get(sourceIndex), neighbor));
-                if (DFSRec(adj, visited, neighborIndex, destinationIndex, path, nodes)) {
-                    return true;
-                }
-                path.removeLast();
+                currentPath.add(new GraphImpl.Edge(nodes.get(sourceIndex), neighbor));
+                DFSRec(adj, visited, neighborIndex, destinationIndex, currentPath, nodes, allPaths);
+                currentPath.removeLast(); // Backtrack
             }
         }
-        return false;
+        visited[sourceIndex] = false;
     }
 }
