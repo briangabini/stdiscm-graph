@@ -1,7 +1,10 @@
 package com.brngbn.console;
 
 import com.brngbn.graph.GraphImpl;
+import com.brngbn.pathfinder.DfsPathFinder;
+import com.brngbn.pathfinder.PathFinder;
 
+import java.util.List;
 import java.util.Scanner;
 
 public class MainConsole {
@@ -45,8 +48,18 @@ public class MainConsole {
         String[] parts = pathQuery.split(" ");
          if (parts.length == 3) {
              String source = parts[1];
-             String destination = parts[2];
-             // graph.printPath(source, destination);
+             String dest = parts[2];
+             PathFinder pathFinder = new DfsPathFinder();
+             List<GraphImpl.Edge> paths = pathFinder.findPath(graph, source, dest);
+
+                if (paths.isEmpty()) {
+                    System.out.println("No path found between " + source + " and " + dest);
+                } else {
+                    System.out.println("Path between " + source + " and " + dest + ":");
+                    for (GraphImpl.Edge edge : paths) {
+                        System.out.println(edge);
+                    }
+                }
          } else {
              System.out.println("Invalid query format for path.");
          }
