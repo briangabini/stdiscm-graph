@@ -9,6 +9,9 @@ import java.util.Scanner;
 
 public class Main {
     public static void main(String[] args) {
+        // Set logger level
+        System.setProperty(org.slf4j.impl.SimpleLogger.DEFAULT_LOG_LEVEL_KEY, "Debug");
+
         String fileName;
         if (args.length > 0) {
             fileName = args[0];

@@ -3,11 +3,15 @@ package com.brngbn.console;
 import com.brngbn.graph.GraphImpl;
 import com.brngbn.pathfinder.DfsPathFinder;
 import com.brngbn.pathfinder.PathFinder;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
 import java.util.Scanner;
 
+@Slf4j
 public class MainConsole {
+
+    private static boolean debug = true;
 
     public static void handleUserQueries(GraphImpl graph) {
         asciiHeader();
@@ -21,7 +25,22 @@ public class MainConsole {
                 break;
             }
 
+            long startTime = System.currentTimeMillis();
+
             processQuery(query, graph);
+
+            long endTime = System.currentTimeMillis();
+            long duration = endTime - startTime;
+
+            if (debug) {
+                log.debug("Query took {} milliseconds to process.", duration);
+                // sleep main
+                try {
+                    Thread.sleep(100);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
         }
     }
 
@@ -58,7 +77,7 @@ public class MainConsole {
                  System.out.println("Path between " + source + " and " + dest + ":");
                  for (List<GraphImpl.Edge> path : paths) {
                      for (GraphImpl.Edge edge : path) {
-                         System.out.print(edge + " ");
+                         System.out.print("(" + edge + ") ");
                      }
                      System.out.println();
                  }
