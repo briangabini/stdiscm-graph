@@ -11,6 +11,7 @@ import java.util.Scanner;
 @Slf4j
 public class MainConsole {
 
+    // debug
     private static final boolean debug = true;
 
     public static void handleUserQueries(GraphImpl graph) {
@@ -31,21 +32,28 @@ public class MainConsole {
 
     private static void processQuery(String query, GraphImpl graph) {
         query = query.trim();
+        TimeMeasurer timeMeasurer = TimeMeasurer.getInstance();
 
         if (query.equals("nodes")) {
             graph.printNodes();
         } else if (query.startsWith("node ")) {
+            timeMeasurer.calculateStartTime();
             handleNodeQuery(query.substring(5), graph);
         } else if (query.equals("edges")) {
+            timeMeasurer.calculateStartTime();
             graph.printEdges();
         } else if (query.startsWith("edge ")) {
+            timeMeasurer.calculateStartTime();
             handleEdgeQuery(query.substring(5), graph);
         } else if (query.startsWith("path ")) {
+            timeMeasurer.calculateStartTime();
             handlePathQuery(query, graph);
         }
         else {
             System.out.println("Invalid query.");
         }
+
+        timeMeasurer.calculateEndTimeAndDuration();
     }
 
     private static void handlePathQuery(String pathQuery, GraphImpl graph) {
@@ -57,12 +65,12 @@ public class MainConsole {
             String dest = parts[2];
             PathFinder pathFinder = new DfsPathFinder();
 
-            long startTime = System.currentTimeMillis();
+            TimeMeasurer timeMeasurer = TimeMeasurer.getInstance();
+            timeMeasurer.calculateStartTime();
 
             List<List<GraphImpl.Edge>> paths = pathFinder.findPaths(graph, source, dest);
 
-            long endTime = System.currentTimeMillis();
-            duration = endTime - startTime;
+            timeMeasurer.calculateEndTimeAndDuration();
 
             if (paths.isEmpty()) {
                 System.out.println("No path found between " + source + " and " + dest);
