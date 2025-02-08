@@ -25,13 +25,7 @@ public class MainConsole {
                 break;
             }
 
-
-
             processQuery(query, graph);
-
-
-
-
         }
     }
 
@@ -97,7 +91,7 @@ public class MainConsole {
     }
 
     private static void handleNodeQuery(String node, GraphImpl graph) {
-        System.out.println("Node " + node + (graph.hasNode(node) ? " is" : " is not") + " in the graph.");
+        System.out.println("Node " + node + (graph.hasNodeSerial(node) ? " is" : " is not") + " in the graph.");
     }
 
     private static void handleEdgeQuery(String edgeQuery, GraphImpl graph) {
@@ -105,7 +99,7 @@ public class MainConsole {
         if (parts.length == 2) {
             String source = parts[0];
             String destination = parts[1];
-            String message = graph.hasEdge(source, destination) ?
+            String message = graph.hasEdgeSerial(source, destination) ?
                     "Edge (" + source + ", " + destination + ") is in the graph." :
                     "Edge (" + source + ", " + destination + ") is not in the graph.";
             System.out.println(message);
