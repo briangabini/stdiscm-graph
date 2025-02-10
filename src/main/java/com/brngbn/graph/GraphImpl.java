@@ -4,20 +4,15 @@ import com.brngbn.console.TimeMeasurer;
 import lombok.Getter;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.*;
 
 @Getter
 public class GraphImpl {
-    private Map<String, List<String>> adjacencyList;        // default: when reading the graph config file
+    private Map<String, List<String>> adjacencyList;
 
-    // Threads
-    private static final int maxNoOfThreads = 8;
-    private final ExecutorService executorService = Executors.newFixedThreadPool(maxNoOfThreads);
-    private final CompletionService<Boolean> completionService = new ExecutorCompletionService<>(executorService);
+    private static final int MAX_THREADS = Runtime.getRuntime().availableProcessors();
+    private final ExecutorService executorService = Executors.newFixedThreadPool(MAX_THREADS);
 
     public GraphImpl() {
         adjacencyList = new HashMap<>();
@@ -44,160 +39,77 @@ public class GraphImpl {
         return edgeList;
     }
 
-    // Time Complexity: O(n)
+    // Serial version
     public boolean hasNodeSerial(String node) {
-        for (String key : adjacencyList.keySet()) {
-            if (key.equals(node)) {
-                return true;
-            }
-        }
-
-        return false;
-
-
+        return adjacencyList.containsKey(node);
     }
 
-    // Time Complexity: O(n + m), n - nodes, m - edges
     public boolean hasEdgeSerial(String source, String destination) {
-        for (Map.Entry<String, List<String>> entry : adjacencyList.entrySet()) {
-            if (entry.getKey().equals(source)) {
-                for (String dest : entry.getValue()) {
-                    if (dest.equals(destination)) {
-                        return true;
-                    }
-                }
-            }
-        }
-        return false;
+        return adjacencyList.containsKey(source) && adjacencyList.get(source).contains(destination);
     }
 
-    // Threaded versions
+    // Threaded version
     public boolean hasNodeThreaded(String node) {
         List<String> nodes = new ArrayList<>(adjacencyList.keySet());
-        int chunkSize = (int) Math.ceil((double) nodes.size() / 8);
-        List<CompletableFuture<Boolean>> futures = new ArrayList<>();
+        int chunkSize = (int) Math.ceil((double) nodes.size() / MAX_THREADS);
 
+        List<Future<Boolean>> futures = new ArrayList<>();
         for (int i = 0; i < nodes.size(); i += chunkSize) {
             int start = i;
             int end = Math.min(i + chunkSize, nodes.size());
-            futures.add(CompletableFuture.supplyAsync(() -> {
+            futures.add(executorService.submit(() -> {
                 for (int j = start; j < end; j++) {
                     if (nodes.get(j).equals(node)) {
                         return true;
                     }
                 }
                 return false;
-            }, executorService));
+            }));
         }
 
-        return futures.stream().anyMatch(future -> {
+        for (Future<Boolean> future : futures) {
             try {
-                return future.get();
-            } catch (Exception e) {
+                if (future.get()) {
+                    futures.forEach(f -> f.cancel(true));
+                    return true;
+                }
+            } catch (InterruptedException | ExecutionException e) {
                 e.printStackTrace();
-                return false;
             }
-        });
+        }
+        return false;
     }
 
-    /*public boolean hasEdgeThreaded(String source, String dest) {
-        ArrayList<Map.Entry<String, List<String>>> entries = new ArrayList<>(adjacencyList.entrySet());
-        int chunkSize = (int) Math.ceil((double) entries.size() / 8);
-        List<CompletableFuture<Boolean>> futures = new ArrayList<>();
+    public boolean hasEdgeThreaded(String source, String destination) {
+        List<Map.Entry<String, List<String>>> entries = new ArrayList<>(adjacencyList.entrySet());
+        int chunkSize = (int) Math.ceil((double) entries.size() / MAX_THREADS);
 
-
+        List<Future<Boolean>> futures = new ArrayList<>();
         for (int i = 0; i < entries.size(); i += chunkSize) {
             int start = i;
             int end = Math.min(i + chunkSize, entries.size());
-            futures.add(CompletableFuture.supplyAsync(() -> {
+            futures.add(executorService.submit(() -> {
                 for (int j = start; j < end; j++) {
                     Map.Entry<String, List<String>> entry = entries.get(j);
-                    if (entry.getKey().equals(source)) {
-                        for (String destVal : entry.getValue()) {
-                            if (destVal.equals(dest)) {
-                                return true;
-                            }
-                        }
+                    if (entry.getKey().equals(source) && entry.getValue().contains(destination)) {
+                        return true;
                     }
                 }
                 return false;
-            }, executorService));
+            }));
         }
 
-        TimeMeasurer.getInstance().calculateStartTime();
-
-        boolean res = futures.stream().anyMatch(future -> {
+        for (Future<Boolean> future : futures) {
             try {
-                return future.get();
-            } catch (Exception e) {
-                e.printStackTrace();
-                return false;
-            }
-        });
-
-        TimeMeasurer.getInstance().calculateEndTimeAndDuration();
-
-        return res;
-    }*/
-    public boolean hasEdgeThreaded(String source, String dest) {
-        ArrayList<Map.Entry<String, List<String>>> entries = new ArrayList<>(adjacencyList.entrySet());
-        int chunkSize = (int) Math.ceil((double) entries.size() / 8);
-
-        ThreadPoolExecutor executor = (ThreadPoolExecutor) Executors.newFixedThreadPool(8);
-        CompletionService<Boolean> completionService = new ExecutorCompletionService<>(executor);
-
-        TimeMeasurer timeMeasurer = TimeMeasurer.getInstance();
-        timeMeasurer.calculateStartTime();
-
-        for (int i = 0; i < entries.size(); i += chunkSize) {
-            int start = i;
-            int end = Math.min(i + chunkSize, entries.size());
-            completionService.submit(() -> {
-                for (int j = start; j < end; j++) {
-                    Map.Entry<String, List<String>> entry = entries.get(j);
-                    if (entry.getKey().equals(source)) {
-                        for (String destVal : entry.getValue()) {
-                            if (destVal.equals(dest)) {
-                                return true;
-                            }
-                        }
-                    }
+                if (future.get()) {
+                    futures.forEach(f -> f.cancel(true));
+                    return true;
                 }
-                return false;
-            });
-        }
-
-        timeMeasurer.calculateEndTimeAndDuration();
-
-        // Manually start the executor service
-        executor.prestartAllCoreThreads();
-
-        timeMeasurer.calculateStartTime();
-
-        boolean res = false;
-        for (int i = 0; i < entries.size() / chunkSize; i++) {
-            try {
-                if (completionService.take().get()) {
-                    res = true;
-                    break;
-                }
-            } catch (Exception e) {
+            } catch (InterruptedException | ExecutionException e) {
                 e.printStackTrace();
             }
         }
-
-        timeMeasurer.calculateEndTimeAndDuration();
-        executorService.shutdown();
-        return res;
-    }
-
-    // api call
-    public boolean hasNode(String node) {
-        return adjacencyList.containsKey(node);
-    }
-
-    public boolean hasEdge(String source, String destination) {
-        return adjacencyList.containsKey(source) && adjacencyList.get(source).contains(destination);
+        return false;
     }
 
     @Override
@@ -213,7 +125,6 @@ public class GraphImpl {
         return sb.toString();
     }
 
-    // print methods
     public void printNodes() {
         System.out.println("Nodes: " + getNodeList());
     }
