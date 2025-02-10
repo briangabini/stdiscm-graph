@@ -37,23 +37,23 @@ public class MainConsole {
         if (query.equals("nodes")) {
             graph.printNodes();
         } else if (query.startsWith("node ")) {
-            timeMeasurer.calculateStartTime();
+            timeMeasurer.startTracking();
             handleNodeQuery(query.substring(5), graph);
         } else if (query.equals("edges")) {
-            timeMeasurer.calculateStartTime();
+            timeMeasurer.startTracking();
             graph.printEdges();
         } else if (query.startsWith("edge ")) {
-            timeMeasurer.calculateStartTime();
+            timeMeasurer.startTracking();
             handleEdgeQuery(query.substring(5), graph);
         } else if (query.startsWith("path ")) {
-            timeMeasurer.calculateStartTime();
+            timeMeasurer.startTracking();
             handlePathQuery(query, graph);
         }
         else {
             System.out.println("Invalid query.");
         }
 
-        timeMeasurer.calculateEndTimeAndDuration();
+        timeMeasurer.calculateAndPrintDuration();
     }
 
     private static void handlePathQuery(String pathQuery, GraphImpl graph) {
@@ -66,11 +66,11 @@ public class MainConsole {
             PathFinder pathFinder = new DfsPathFinder();
 
             TimeMeasurer timeMeasurer = TimeMeasurer.getInstance();
-            timeMeasurer.calculateStartTime();
+            timeMeasurer.startTracking();
 
             List<List<GraphImpl.Edge>> paths = pathFinder.findPaths(graph, source, dest);
 
-            timeMeasurer.calculateEndTimeAndDuration();
+            timeMeasurer.calculateAndPrintDuration();
 
             if (paths.isEmpty()) {
                 System.out.println("No path found between " + source + " and " + dest);

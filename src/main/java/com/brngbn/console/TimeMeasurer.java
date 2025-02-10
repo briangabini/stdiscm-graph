@@ -1,7 +1,6 @@
 package com.brngbn.console;
 
 import lombok.extern.slf4j.Slf4j;
-import org.jfree.util.Log;
 
 @Slf4j
 public class TimeMeasurer {
@@ -23,13 +22,17 @@ public class TimeMeasurer {
         sharedInstance = null;
     }
 
-    public void calculateStartTime() {
+    public void startTracking() {
         startTime = System.nanoTime();
     }
 
-    public void calculateEndTimeAndDuration() {
+    public long calculateDuration() {
         long endTime = System.nanoTime();
-//        Log.debug("Time taken: " + (endTime - startTime) + " ms");
-        System.out.println("Time taken: " + (endTime - startTime) + " ms");
+        return endTime - startTime;
+    }
+
+    public void calculateAndPrintDuration() {
+        long duration = calculateDuration();
+        System.out.println("Time taken: " + duration + " ns");
     }
 }

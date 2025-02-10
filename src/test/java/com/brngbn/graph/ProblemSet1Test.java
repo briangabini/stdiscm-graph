@@ -37,23 +37,41 @@ public class ProblemSet1Test {
     @Test
     public void test_EdgeQuerySerial() {
 
-        timeMeasurer.calculateStartTime();
+        timeMeasurer.startTracking();
 
         // call edge query serial
         graph.hasNodeSerial("a");
 
-        timeMeasurer.calculateEndTimeAndDuration();
+        timeMeasurer.calculateAndPrintDuration();
     }
 
     @Test
     public void test_NodeQuerySerialAndThreaded() {
+        long totalSerialDuration = 0;
+        long totalThreadedDuration = 0;
 
-        // call node query serial
-        timeMeasurer.calculateStartTime();
-        graph.hasEdgeSerial("a", "t");
-        timeMeasurer.calculateEndTimeAndDuration();
+        for (int i = 0; i < 10; i++) {
 
-        // call node query threaded
-        graph.hasEdgeThreaded("a", "t");
+            System.out.println("Iteration: " + (i + 1));
+
+            // call node query serial
+            System.out.println("Serial");
+            timeMeasurer.startTracking();
+            graph.hasEdgeSerial("a", "t");
+            timeMeasurer.calculateAndPrintDuration();
+            totalSerialDuration += timeMeasurer.calculateDuration();
+
+            // call node query threaded
+            System.out.println("Threaded");
+            graph.hasEdgeThreaded("a", "t");
+
+            System.out.println();
+        }
+
+        long avgSerialDuration = totalSerialDuration / 5;
+        long avgThreadedDuration = totalThreadedDuration / 5;
+
+        System.out.println("Average Serial Duration: " + avgSerialDuration + " ns");
+        System.out.println("Average Threaded Duration: " + avgThreadedDuration + " ns");
     }
 }
