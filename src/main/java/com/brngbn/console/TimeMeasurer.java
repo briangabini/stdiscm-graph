@@ -7,7 +7,7 @@ import org.jfree.util.Log;
 public class TimeMeasurer {
     private static TimeMeasurer sharedInstance;
 
-    private static long startTime;
+    private long startTime;
 
     private TimeMeasurer() {
     }
@@ -24,11 +24,11 @@ public class TimeMeasurer {
     }
 
     public void calculateStartTime() {
-        startTime = System.currentTimeMillis();
+        startTime = System.nanoTime();
     }
 
     public void calculateEndTimeAndDuration() {
-        long endTime = System.currentTimeMillis();
+        long endTime = System.nanoTime();
 //        Log.debug("Time taken: " + (endTime - startTime) + " ms");
         System.out.println("Time taken: " + (endTime - startTime) + " ms");
     }
