@@ -53,6 +53,8 @@ public class GraphImpl {
         }
 
         return false;
+
+
     }
 
     // Time Complexity: O(n + m), n - nodes, m - edges
@@ -141,6 +143,12 @@ public class GraphImpl {
         ArrayList<Map.Entry<String, List<String>>> entries = new ArrayList<>(adjacencyList.entrySet());
         int chunkSize = (int) Math.ceil((double) entries.size() / 8);
 
+        ThreadPoolExecutor executor = (ThreadPoolExecutor) Executors.newFixedThreadPool(8);
+        CompletionService<Boolean> completionService = new ExecutorCompletionService<>(executor);
+
+        TimeMeasurer timeMeasurer = TimeMeasurer.getInstance();
+        timeMeasurer.calculateStartTime();
+
         for (int i = 0; i < entries.size(); i += chunkSize) {
             int start = i;
             int end = Math.min(i + chunkSize, entries.size());
@@ -159,7 +167,11 @@ public class GraphImpl {
             });
         }
 
-        TimeMeasurer timeMeasurer = TimeMeasurer.getInstance();
+        timeMeasurer.calculateEndTimeAndDuration();
+
+        // Manually start the executor service
+        executor.prestartAllCoreThreads();
+
         timeMeasurer.calculateStartTime();
 
         boolean res = false;
