@@ -16,7 +16,6 @@ public class GraphImpl {
 
     public GraphImpl() {
         adjacencyList = new HashMap<>();
-        initializeExecutorService();
     }
 
     // Method to initialize the thread pool
@@ -63,13 +62,10 @@ public class GraphImpl {
         return adjacencyList.containsKey(source) && adjacencyList.get(source).contains(destination);
     }
 
-    // Optimized Threaded version using invokeAny for early exit
-    public boolean hasNodeThreaded(String node) {
+    // Task Assignment
+    private List<Callable<Boolean>> assignNodeTasks(String node) {
         List<String> nodes = new ArrayList<>(adjacencyList.keySet());
         int chunkSize = (int) Math.ceil((double) nodes.size() / MAX_THREADS);
-
-        System.out.println("Setting Up Tasks");
-        TimeMeasurer.getInstance().startTracking();
 
         List<Callable<Boolean>> tasks = new ArrayList<>();
         for (int i = 0; i < nodes.size(); i += chunkSize) {
@@ -84,28 +80,13 @@ public class GraphImpl {
                 return false;
             });
         }
-        TimeMeasurer.getInstance().calculateAndPrintDuration();
-
-        System.out.println("Invoking Tasks");
-
-        try {
-            TimeMeasurer.getInstance().startTracking();
-            boolean res = executorService.invokeAny(tasks);
-            TimeMeasurer.getInstance().calculateAndPrintDuration();
-            return res;
-        } catch (InterruptedException | ExecutionException e) {
-            e.printStackTrace();
-            return false;
-        }
+        return tasks;
     }
 
-    public boolean hasEdgeThreaded(String source, String destination) {
+    private List<Callable<Boolean>> assignEdgeTasks(String source, String destination) {
         List<Map.Entry<String, List<String>>> entries = new ArrayList<>(adjacencyList.entrySet());
         int chunkSize = (int) Math.ceil((double) entries.size() / MAX_THREADS);
 
-        System.out.println("Setting Up Tasks");
-
-        TimeMeasurer.getInstance().startTracking();
         List<Callable<Boolean>> tasks = new ArrayList<>();
         for (int i = 0; i < entries.size(); i += chunkSize) {
             int start = i;
@@ -120,18 +101,42 @@ public class GraphImpl {
                 return false;
             });
         }
-        TimeMeasurer.getInstance().calculateAndPrintDuration();
+        return tasks;
+    }
 
-        System.out.println("Invoking Tasks");
+    // Task Execution
+    public boolean hasNodeThreaded(String node) {
+        initializeExecutorService();
+        List<Callable<Boolean>> tasks = assignNodeTasks(node);
+
         try {
-            TimeMeasurer.getInstance().startTracking();
-            boolean res = executorService.invokeAny(tasks);
-            TimeMeasurer.getInstance().calculateAndPrintDuration();
-            return res;
+            List<Future<Boolean>> futures = executorService.invokeAll(tasks);
+            for (Future<Boolean> future : futures) {
+                if (future.get()) {
+                    return true;
+                }
+            }
         } catch (InterruptedException | ExecutionException e) {
             e.printStackTrace();
-            return false;
         }
+        return false;
+    }
+
+    public boolean hasEdgeThreaded(String source, String destination) {
+        initializeExecutorService();
+        List<Callable<Boolean>> tasks = assignEdgeTasks(source, destination);
+
+        try {
+            List<Future<Boolean>> futures = executorService.invokeAll(tasks);
+            for (Future<Boolean> future : futures) {
+                if (future.get()) {
+                    return true;
+                }
+            }
+        } catch (InterruptedException | ExecutionException e) {
+            e.printStackTrace();
+        }
+        return false;
     }
 
     @Override

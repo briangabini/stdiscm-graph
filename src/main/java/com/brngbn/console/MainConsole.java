@@ -23,6 +23,7 @@ public class MainConsole {
             String query = scanner.nextLine();
 
             if (query.equals("exit")) {
+                graph.shutdownExecutorService();
                 break;
             }
 
@@ -65,23 +66,16 @@ public class MainConsole {
             String dest = parts[2];
             PathFinder pathFinder = new DfsPathFinder();
 
-            TimeMeasurer timeMeasurer = TimeMeasurer.getInstance();
-            timeMeasurer.startTracking();
+            List<GraphImpl.Edge> path = pathFinder.findPath(graph, source, dest);
 
-            List<List<GraphImpl.Edge>> paths = pathFinder.findPaths(graph, source, dest);
-
-            timeMeasurer.calculateAndPrintDuration();
-
-            if (paths.isEmpty()) {
+            if (path.isEmpty()) {
                 System.out.println("No path found between " + source + " and " + dest);
             } else {
                 System.out.println("Path between " + source + " and " + dest + ":");
-                for (List<GraphImpl.Edge> path : paths) {
-                    for (GraphImpl.Edge edge : path) {
-                        System.out.print("(" + edge + ") ");
-                    }
-                    System.out.println();
+                for (GraphImpl.Edge edge : path) {
+                    System.out.print("(" + edge + ") ");
                 }
+                System.out.println();
             }
         } else {
             System.out.println("Invalid query format for path.");
@@ -89,7 +83,6 @@ public class MainConsole {
 
         if (debug) {
             log.debug("Query took {} milliseconds to process.", duration);
-            // sleep main
             try {
                 Thread.sleep(100);
             } catch (InterruptedException e) {
@@ -99,7 +92,7 @@ public class MainConsole {
     }
 
     private static void handleNodeQuery(String node, GraphImpl graph) {
-        System.out.println("Node " + node + (graph.hasNodeSerial(node) ? " is" : " is not") + " in the graph.");
+        System.out.println("Node " + node + (graph.hasNodeThreaded(node) ? " is" : " is not") + " in the graph.");
     }
 
     private static void handleEdgeQuery(String edgeQuery, GraphImpl graph) {
@@ -107,7 +100,7 @@ public class MainConsole {
         if (parts.length == 2) {
             String source = parts[0];
             String destination = parts[1];
-            String message = graph.hasEdgeSerial(source, destination) ?
+            String message = graph.hasEdgeThreaded(source, destination) ?
                     "Edge (" + source + ", " + destination + ") is in the graph." :
                     "Edge (" + source + ", " + destination + ") is not in the graph.";
             System.out.println(message);

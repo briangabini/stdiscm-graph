@@ -6,66 +6,71 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
+import java.util.concurrent.*;
 
 public class DfsPathFinderThreaded implements PathFinder {
 
     @Override
-    public List<List<GraphImpl.Edge>> findPaths(GraphImpl graph, String source, String dest) {
+    public List<GraphImpl.Edge> findPath(GraphImpl graph, String source, String dest) {
         Map<String, Integer> nodeIndexMap = new HashMap<>();
         List<String> nodeList = graph.getNodeList();
         for (int i = 0; i < nodeList.size(); i++) {
             nodeIndexMap.put(nodeList.get(i), i);
         }
 
+        if (!nodeIndexMap.containsKey(source) || !nodeIndexMap.containsKey(dest)) {
+            return new ArrayList<>(); // Return empty list if source or destination doesn't exist
+        }
+
         int adjListSize = graph.getAdjacencyList().size();
         boolean[] visited = new boolean[adjListSize];
-        List<List<GraphImpl.Edge>> allPaths = new ArrayList<>();
         List<GraphImpl.Edge> currentPath = new ArrayList<>();
 
         ExecutorService executor = Executors.newFixedThreadPool(8);
-        List<Future<Void>> futures = new ArrayList<>();
-
-        futures.add(executor.submit(() -> {
-            DFSRec(graph.getAdjacencyList(), visited, nodeIndexMap.get(source), nodeIndexMap.get(dest), currentPath, nodeList, allPaths);
-            return null;
-        }));
-
-        for (Future<Void> future : futures) {
-            try {
-                future.get(); // Wait for all DFS tasks to complete
-            } catch (InterruptedException | ExecutionException e) {
-                e.printStackTrace();
+        Future<List<GraphImpl.Edge>> future = executor.submit(() -> {
+            List<GraphImpl.Edge> resultPath = new ArrayList<>();
+            if (DFSRec(graph.getAdjacencyList(), visited, nodeIndexMap.get(source), nodeIndexMap.get(dest), currentPath, nodeList, resultPath)) {
+                return resultPath;
             }
+            return new ArrayList<>();
+        });
+
+        List<GraphImpl.Edge> path = new ArrayList<>();
+        try {
+            path = future.get(); // Wait for DFS task to complete
+        } catch (InterruptedException | ExecutionException e) {
+            e.printStackTrace();
         }
 
         executor.shutdown();
-        return allPaths;
+        return path;
     }
 
     // Recursive function for DFS traversal
-    private static void DFSRec(Map<String, List<String>> adj, boolean[] visited, int sourceIndex, int destinationIndex, List<GraphImpl.Edge> currentPath, List<String> nodes, List<List<GraphImpl.Edge>> allPaths) {
+    private static boolean DFSRec(Map<String, List<String>> adj, boolean[] visited, int sourceIndex, int destinationIndex, List<GraphImpl.Edge> currentPath, List<String> nodes, List<GraphImpl.Edge> resultPath) {
         visited[sourceIndex] = true;
 
         if (sourceIndex == destinationIndex) {
-            synchronized (allPaths) {
-                allPaths.add(new ArrayList<>(currentPath));
-            }
+            resultPath.addAll(new ArrayList<>(currentPath));
             visited[sourceIndex] = false;
-            return;
+            return true; // Path found
         }
 
-        for (String neighbor : adj.get(nodes.get(sourceIndex))) {
-            int neighborIndex = nodes.indexOf(neighbor);
-            if (!visited[neighborIndex]) {
-                currentPath.add(new GraphImpl.Edge(nodes.get(sourceIndex), neighbor));
-                DFSRec(adj, visited, neighborIndex, destinationIndex, currentPath, nodes, allPaths);
-                currentPath.remove(currentPath.size() - 1); // Backtrack
+        List<String> neighbors = adj.get(nodes.get(sourceIndex));
+        if (neighbors != null) {
+            for (String neighbor : neighbors) {
+                int neighborIndex = nodes.indexOf(neighbor);
+                if (neighborIndex != -1 && !visited[neighborIndex]) {
+                    currentPath.add(new GraphImpl.Edge(nodes.get(sourceIndex), neighbor));
+                    if (DFSRec(adj, visited, neighborIndex, destinationIndex, currentPath, nodes, resultPath)) {
+                        return true; // Stop once a path is found
+                    }
+                    currentPath.removeLast(); // Backtrack
+                }
             }
         }
+
         visited[sourceIndex] = false; // Unmark the current node
+        return false;
     }
 }
