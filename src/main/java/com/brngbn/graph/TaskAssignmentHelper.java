@@ -14,10 +14,15 @@ public class TaskAssignmentHelper {
         for (int i = 0; i < nodes.size(); i += chunkSize) {
             int start = i;
             int end = Math.min(i + chunkSize, nodes.size());
+
+            // Debug: Print assigned task range
+            System.out.println("Task checking nodes from index " + start + " to " + end);
+
             tasks.add(() -> {
                 for (int j = start; j < end; j++) {
                     if (nodes.get(j).equals(node)) {
-                        return true;
+                        System.out.println("Found node: " + node);
+                        return true;  // Ensure we explicitly return true when found
                     }
                 }
                 return false;
