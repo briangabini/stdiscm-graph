@@ -1,10 +1,11 @@
 package com.brngbn.graph;
 
+import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.Callable;
 
 public class TaskAssignmentHelper {
-    private static final int MAX_THREADS = Runtime.getRuntime().availableProcessors();
+    private static final int MAX_THREADS = 6;
 
     public static List<Callable<Boolean>> assignNodeTasks(Map<String, List<String>> adjacencyList, String node) {
         List<String> nodes = new ArrayList<>(adjacencyList.keySet());

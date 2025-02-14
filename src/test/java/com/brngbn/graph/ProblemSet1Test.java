@@ -1,6 +1,5 @@
 package com.brngbn.graph;
 
-import com.brngbn.console.TimeMeasurer;
 import com.brngbn.pathfinder.DfsPathFinder;
 import com.brngbn.pathfinder.DfsPathFinderThreaded;
 import org.junit.jupiter.api.BeforeEach;
@@ -15,14 +14,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 public class ProblemSet1Test {
 
     private GraphImpl graph;
-    private TimeMeasurer timeMeasurer;
     private DfsPathFinder dfsPathFinderSerial;
     private DfsPathFinderThreaded dfsPathFinderThreaded;
 
     @BeforeEach
     public void setUp() throws IOException {
         GraphConfigParser.initialize();
-        timeMeasurer = TimeMeasurer.getInstance();
         graph = new GraphImpl();
         graph.readGraphConfig("complete_graph_10_nodes.txt");
 
@@ -102,30 +99,16 @@ public class ProblemSet1Test {
 
     @Test
     public void test_EdgeQuerySerialAndThreaded_TimeComplexity() {
-        timeMeasurer.clearDurations();
-
         // Loop for hasEdgeSerial
         for (int i = 0; i < 10; i++) {
             System.out.println("Serial Iteration: " + (i + 1));
-            timeMeasurer.startTracking();
             graph.hasEdgeSerial("a", "t");
-            timeMeasurer.addDuration(timeMeasurer.calculateDuration());
-            timeMeasurer.calculateAndPrintDuration();
         }
-
-        double avgSerialDuration = timeMeasurer.getAverageDuration();
-        System.out.println("Average Serial Duration: " + avgSerialDuration + " ns");
-
-        timeMeasurer.clearDurations();
 
         // Loop for hasEdgeThreaded
         for (int i = 0; i < 10; i++) {
             System.out.println("Threaded Iteration: " + (i + 1));
-            timeMeasurer.startTracking();
             graph.hasEdgeThreaded("a", "t");
         }
-
-        double avgThreadedDuration = timeMeasurer.getAverageDuration();
-        System.out.println("Average Threaded Duration: " + avgThreadedDuration + " ns");
     }
 }

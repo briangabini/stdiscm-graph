@@ -12,8 +12,11 @@ import java.util.Scanner;
 @Slf4j
 public class MainConsole {
 
-    // debug
+    // Debug mode
     private static final boolean debug = true;
+
+    // Flag to control parallel execution
+    private static boolean useParallel = false;
 
     public static void handleUserQueries(GraphImpl graph) {
         asciiHeader();
@@ -21,10 +24,11 @@ public class MainConsole {
 
         while (true) {
             System.out.print("Enter your query: ");
-            String query = scanner.nextLine();
+            String query = scanner.nextLine().trim();
 
-            if (query.equals("exit")) {
+            if (query.equalsIgnoreCase("exit")) {
                 ThreadPoolManager.getInstance().shutdown();
+                System.out.println("Exiting program...");
                 break;
             }
 
@@ -33,34 +37,62 @@ public class MainConsole {
     }
 
     private static void processQuery(String query, GraphImpl graph) {
-        query = query.trim();
         TimeMeasurer timeMeasurer = TimeMeasurer.getInstance();
+        String timerName = "query";
 
         if (query.equals("nodes")) {
+            timeMeasurer.startTracking(timerName);
             graph.printNodes();
         } else if (query.startsWith("node ")) {
-            timeMeasurer.startTracking();
+            timeMeasurer.startTracking(timerName);
             handleNodeQuery(query.substring(5), graph);
         } else if (query.equals("edges")) {
-            timeMeasurer.startTracking();
+            timeMeasurer.startTracking(timerName);
             graph.printEdges();
         } else if (query.startsWith("edge ")) {
-            timeMeasurer.startTracking();
+            timeMeasurer.startTracking(timerName);
             handleEdgeQuery(query.substring(5), graph);
         } else if (query.startsWith("path ")) {
-            timeMeasurer.startTracking();
+            timeMeasurer.startTracking(timerName);
             handlePathQuery(query, graph);
-        }
-        else {
+        } else if (query.startsWith("parallel ")) {
+            handleParallelCommand(query);
+        } else {
             System.out.println("Invalid query.");
         }
 
-        timeMeasurer.calculateAndPrintDuration();
+        timeMeasurer.calculateAndPrintDuration(timerName);
+    }
+
+    private static void handleParallelCommand(String query) {
+        try {
+            int value = Integer.parseInt(query.split(" ")[1]);
+            useParallel = value == 1;
+            System.out.println("Parallel execution " + (useParallel ? "enabled" : "disabled"));
+        } catch (Exception e) {
+            System.out.println("Invalid format. Use: parallel 1 (enable) or parallel 0 (disable)");
+        }
+    }
+
+    private static void handleNodeQuery(String node, GraphImpl graph) {
+        boolean exists = useParallel ? graph.hasNodeThreaded(node) : graph.hasNodeSerial(node);
+        System.out.println("Node " + node + (exists ? " is" : " is not") + " in the graph.");
+    }
+
+    private static void handleEdgeQuery(String edgeQuery, GraphImpl graph) {
+        String[] parts = edgeQuery.split(" ");
+        if (parts.length == 2) {
+            String source = parts[0];
+            String destination = parts[1];
+
+            boolean exists = useParallel ? graph.hasEdgeThreaded(source, destination) : graph.hasEdgeSerial(source, destination);
+            System.out.println("Edge (" + source + ", " + destination + ") " + (exists ? "is" : "is not") + " in the graph.");
+        } else {
+            System.out.println("Invalid query format for edge.");
+        }
     }
 
     private static void handlePathQuery(String pathQuery, GraphImpl graph) {
-        long duration = 0;
-
         String[] parts = pathQuery.split(" ");
         if (parts.length == 3) {
             String source = parts[1];
@@ -73,40 +105,11 @@ public class MainConsole {
                 System.out.println("No path found between " + source + " and " + dest);
             } else {
                 System.out.println("Path between " + source + " and " + dest + ":");
-                for (GraphImpl.Edge edge : path) {
-                    System.out.print("(" + edge + ") ");
-                }
+                path.forEach(edge -> System.out.print("(" + edge + ") "));
                 System.out.println();
             }
         } else {
             System.out.println("Invalid query format for path.");
-        }
-
-        if (debug) {
-            log.debug("Query took {} milliseconds to process.", duration);
-            try {
-                Thread.sleep(100);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        }
-    }
-
-    private static void handleNodeQuery(String node, GraphImpl graph) {
-        System.out.println("Node " + node + (graph.hasNodeThreaded(node) ? " is" : " is not") + " in the graph.");
-    }
-
-    private static void handleEdgeQuery(String edgeQuery, GraphImpl graph) {
-        String[] parts = edgeQuery.split(" ");
-        if (parts.length == 2) {
-            String source = parts[0];
-            String destination = parts[1];
-            String message = graph.hasEdgeThreaded(source, destination) ?
-                    "Edge (" + source + ", " + destination + ") is in the graph." :
-                    "Edge (" + source + ", " + destination + ") is not in the graph.";
-            System.out.println(message);
-        } else {
-            System.out.println("Invalid query format for edge.");
         }
     }
 
