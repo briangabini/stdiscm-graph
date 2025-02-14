@@ -3,6 +3,7 @@ package com.brngbn.console;
 import com.brngbn.graph.GraphImpl;
 import com.brngbn.pathfinder.DfsPathFinder;
 import com.brngbn.pathfinder.PathFinder;
+import com.brngbn.thread.ThreadPoolManager;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
@@ -23,7 +24,7 @@ public class MainConsole {
             String query = scanner.nextLine();
 
             if (query.equals("exit")) {
-                graph.shutdownExecutorService();
+                ThreadPoolManager.getInstance().shutdown();
                 break;
             }
 
