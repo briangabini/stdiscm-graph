@@ -2,6 +2,7 @@ package com.brngbn.console;
 
 import com.brngbn.graph.GraphImpl;
 import com.brngbn.pathfinder.DfsPathFinder;
+import com.brngbn.pathfinder.DfsPathFinderThreaded;
 import com.brngbn.pathfinder.PathFinder;
 import com.brngbn.thread.ThreadPoolManager;
 import lombok.extern.slf4j.Slf4j;
@@ -56,9 +57,11 @@ public class MainConsole {
             timeMeasurer.startTracking(timerName);
             handlePathQuery(query, graph);
         } else if (query.startsWith("parallel ")) {
+            timeMeasurer.startTracking(timerName);
             handleParallelCommand(query);
         } else {
             System.out.println("Invalid query.");
+            return;
         }
 
         timeMeasurer.calculateAndPrintDuration(timerName);
@@ -97,8 +100,8 @@ public class MainConsole {
         if (parts.length == 3) {
             String source = parts[1];
             String dest = parts[2];
-            PathFinder pathFinder = new DfsPathFinder();
 
+            PathFinder pathFinder = useParallel ? new DfsPathFinderThreaded() : new DfsPathFinder();
             List<GraphImpl.Edge> path = pathFinder.findPath(graph, source, dest);
 
             if (path.isEmpty()) {

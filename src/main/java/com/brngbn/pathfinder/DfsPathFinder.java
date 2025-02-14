@@ -2,59 +2,67 @@ package com.brngbn.pathfinder;
 
 import com.brngbn.graph.GraphImpl;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class DfsPathFinder implements PathFinder {
 
     @Override
     public List<GraphImpl.Edge> findPath(GraphImpl graph, String source, String dest) {
-        Map<String, Integer> nodeIndexMap = new HashMap<>();
-        List<String> nodeList = graph.getNodeList();
-        for (int i = 0; i < nodeList.size(); i++) {
-            nodeIndexMap.put(nodeList.get(i), i);
+        if (!graph.getAdjacencyList().containsKey(source) || !graph.getAdjacencyList().containsKey(dest)) {
+            return new ArrayList<>(); // Return empty if nodes don't exist
         }
 
-        if (!nodeIndexMap.containsKey(source) || !nodeIndexMap.containsKey(dest)) {
-            return new ArrayList<>(); // Return empty list if source or destination doesn't exist
-        }
-
-        int adjListSize = graph.getAdjacencyList().size();
-        boolean[] visited = new boolean[adjListSize];
-        List<GraphImpl.Edge> currentPath = new ArrayList<>();
-
-        if (DFSRec(graph.getAdjacencyList(), visited, nodeIndexMap.get(source), nodeIndexMap.get(dest), currentPath, nodeList)) {
-            return currentPath;
-        }
-
-        return new ArrayList<>(); // Return empty list if no path found
+        return iterativeDFS(graph, source, dest);
     }
 
-    // Recursive function for DFS traversal
-    private static boolean DFSRec(Map<String, List<String>> adj, boolean[] visited, int sourceIndex, int destinationIndex, List<GraphImpl.Edge> currentPath, List<String> nodes) {
-        visited[sourceIndex] = true;
+    /**
+     * Iterative DFS using an explicit stack to prevent recursion depth issues.
+     */
+    private List<GraphImpl.Edge> iterativeDFS(GraphImpl graph, String source, String destination) {
+        Map<String, String> parentMap = new HashMap<>(); // Tracks path traversal
+        Stack<String> stack = new Stack<>();
+        Set<String> visited = new HashSet<>();
 
-        if (sourceIndex == destinationIndex) {
-            return true; // Path found
-        }
+        stack.push(source);
+        visited.add(source);
 
-        List<String> neighbors = adj.get(nodes.get(sourceIndex));
-        if (neighbors != null) {
+        while (!stack.isEmpty()) {
+            String current = stack.pop();
+
+            if (current.equals(destination)) {
+                return constructPath(parentMap, source, destination);
+            }
+
+            List<String> neighbors = graph.getAdjacencyList().getOrDefault(current, Collections.emptyList());
             for (String neighbor : neighbors) {
-                int neighborIndex = nodes.indexOf(neighbor);
-                if (neighborIndex != -1 && !visited[neighborIndex]) {
-                    currentPath.add(new GraphImpl.Edge(nodes.get(sourceIndex), neighbor));
-                    if (DFSRec(adj, visited, neighborIndex, destinationIndex, currentPath, nodes)) {
-                        return true; // Stop once a path is found
-                    }
-                    currentPath.removeLast(); // Backtrack
+                if (!visited.contains(neighbor)) {
+                    visited.add(neighbor);
+                    parentMap.put(neighbor, current); // Track the path
+                    stack.push(neighbor);
                 }
             }
         }
 
-        visited[sourceIndex] = false;
-        return false;
+        return new ArrayList<>(); // No path found
+    }
+
+    /**
+     * Constructs the path from source to destination using parent mapping.
+     */
+    private List<GraphImpl.Edge> constructPath(Map<String, String> parentMap, String source, String destination) {
+        List<GraphImpl.Edge> path = new ArrayList<>();
+        String current = destination;
+
+        while (!current.equals(source)) {
+            String parent = parentMap.get(current);
+            if (parent == null) {
+                return new ArrayList<>(); // Path reconstruction failed
+            }
+            path.add(new GraphImpl.Edge(parent, current));
+            current = parent;
+        }
+
+        Collections.reverse(path); // Reverse to correct order
+        return path;
     }
 }
