@@ -7,6 +7,7 @@ import com.brngbn.pathfinder.PathFinder;
 import com.brngbn.thread.ThreadPoolManager;
 import lombok.extern.slf4j.Slf4j;
 
+import java.io.*;
 import java.util.List;
 import java.util.Scanner;
 
@@ -18,6 +19,8 @@ public class MainConsole {
 
     // Flag to control parallel execution
     private static boolean useParallel = false;
+
+    private final static String inputDirectory = "src/main/resources/inputs/";
 
     public static void handleUserQueries(GraphImpl graph) {
         asciiHeader();
@@ -31,9 +34,27 @@ public class MainConsole {
                 ThreadPoolManager.getInstance().shutdown();
                 System.out.println("Exiting program...");
                 break;
+            } else if (query.startsWith("readCommands ")) {
+                handleFileInput(query.substring(13), graph);
+            } else {
+                processQuery(query, graph);
             }
+        }
+    }
 
-            processQuery(query, graph);
+    private static void handleFileInput(String filename, GraphImpl graph) {
+        try (BufferedReader reader = new BufferedReader(new FileReader(inputDirectory + filename))) {
+            System.out.println("Processing queries from file: " + filename);
+            String line;
+            while ((line = reader.readLine()) != null) {
+                line = line.trim();
+                if (!line.isEmpty()) {
+                    System.out.println("Executing: " + line);
+                    processQuery(line, graph);
+                }
+            }
+        } catch (IOException e) {
+            System.err.println("Error reading file: " + filename);
         }
     }
 

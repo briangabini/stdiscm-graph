@@ -8,7 +8,7 @@ import java.util.concurrent.*;
 
 @Getter
 public class ThreadPoolManager {
-    private static final int MAX_THREADS = 666666;
+    private static final int MAX_THREADS = 6;
     private static ThreadPoolManager instance;
     private final ExecutorService executorService;
 
