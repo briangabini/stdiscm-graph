@@ -1,7 +1,6 @@
 package com.brngbn.pathfinder;
 
 import com.brngbn.graph.GraphImpl;
-
 import java.util.*;
 import java.util.concurrent.*;
 
@@ -14,12 +13,11 @@ public class DfsPathFinderThreaded implements PathFinder {
         if (!graph.getAdjacencyList().containsKey(source) || !graph.getAdjacencyList().containsKey(dest)) {
             return new ArrayList<>(); // Return empty if nodes don't exist
         }
-
         return parallelDFS(graph, source, dest);
     }
 
     /**
-     * Parallel DFS using a thread pool to handle deep graphs without recursion depth issues.
+     * Parallel DFS using a thread pool.
      */
     private List<GraphImpl.Edge> parallelDFS(GraphImpl graph, String source, String destination) {
         ExecutorService executor = Executors.newFixedThreadPool(MAX_THREADS);
@@ -38,11 +36,12 @@ public class DfsPathFinderThreaded implements PathFinder {
                 String current = queue.poll();
                 if (current.equals(destination)) {
                     executor.shutdown();
-                    return constructPath(parentMap, source, destination);
+                    return constructPath(graph, parentMap, source, destination);
                 }
-
-                List<String> neighbors = graph.getAdjacencyList().getOrDefault(current, Collections.emptyList());
-                for (String neighbor : neighbors) {
+                // Use a new LinkedList as default
+                List<GraphImpl.Edge> edges = graph.getAdjacencyList().getOrDefault(current, new LinkedList<>());
+                for (GraphImpl.Edge edge : edges) {
+                    String neighbor = edge.neighbor;
                     if (visited.add(neighbor)) { // Add only if not visited
                         parentMap.put(neighbor, current);
                         queue.add(neighbor);
@@ -53,7 +52,6 @@ public class DfsPathFinderThreaded implements PathFinder {
                     }
                 }
             }
-
             try {
                 futures.addAll(executor.invokeAll(tasks)); // Process tasks in parallel
             } catch (InterruptedException e) {
@@ -66,25 +64,34 @@ public class DfsPathFinderThreaded implements PathFinder {
     }
 
     private void processNeighbor(String neighbor, String parent) {
-        // This is a placeholder for potential logging or additional processing
+        // Placeholder for additional processing or logging
     }
 
     /**
-     * Constructs the path from source to destination using parent mapping.
+     * Reconstructs the path from source to destination using the parent mapping.
      */
-    private List<GraphImpl.Edge> constructPath(Map<String, String> parentMap, String source, String destination) {
+    private List<GraphImpl.Edge> constructPath(GraphImpl graph, Map<String, String> parentMap, String source, String destination) {
         List<GraphImpl.Edge> path = new ArrayList<>();
         String current = destination;
 
         while (!current.equals(source)) {
             String parent = parentMap.get(current);
             if (parent == null) {
-                return new ArrayList<>();
+                return new ArrayList<>(); // Path reconstruction failed
             }
-            path.add(new GraphImpl.Edge(parent, current));
+            GraphImpl.Edge foundEdge = null;
+            for (GraphImpl.Edge edge : graph.getAdjacencyList().get(parent)) {
+                if (edge.neighbor.equals(current)) {
+                    foundEdge = edge;
+                    break;
+                }
+            }
+            if (foundEdge == null) {
+                foundEdge = new GraphImpl.Edge(current, 0);
+            }
+            path.add(foundEdge);
             current = parent;
         }
-
         Collections.reverse(path);
         return path;
     }

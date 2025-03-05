@@ -1,7 +1,6 @@
 package com.brngbn.pathfinder;
 
 import com.brngbn.graph.GraphImpl;
-
 import java.util.*;
 
 public class DfsPathFinder implements PathFinder {
@@ -11,12 +10,11 @@ public class DfsPathFinder implements PathFinder {
         if (!graph.getAdjacencyList().containsKey(source) || !graph.getAdjacencyList().containsKey(dest)) {
             return new ArrayList<>(); // Return empty if nodes don't exist
         }
-
         return iterativeDFS(graph, source, dest);
     }
 
     /**
-     * Iterative DFS using an explicit stack to prevent recursion depth issues.
+     * Iterative DFS using an explicit stack.
      */
     private List<GraphImpl.Edge> iterativeDFS(GraphImpl graph, String source, String destination) {
         Map<String, String> parentMap = new HashMap<>(); // Tracks path traversal
@@ -30,11 +28,13 @@ public class DfsPathFinder implements PathFinder {
             String current = stack.pop();
 
             if (current.equals(destination)) {
-                return constructPath(parentMap, source, destination);
+                return constructPath(graph, parentMap, source, destination);
             }
 
-            List<String> neighbors = graph.getAdjacencyList().getOrDefault(current, Collections.emptyList());
-            for (String neighbor : neighbors) {
+            // Use a new LinkedList as default
+            List<GraphImpl.Edge> edges = graph.getAdjacencyList().getOrDefault(current, new LinkedList<>());
+            for (GraphImpl.Edge edge : edges) {
+                String neighbor = edge.neighbor; // Use the neighbor field
                 if (!visited.contains(neighbor)) {
                     visited.add(neighbor);
                     parentMap.put(neighbor, current); // Track the path
@@ -42,14 +42,14 @@ public class DfsPathFinder implements PathFinder {
                 }
             }
         }
-
         return new ArrayList<>(); // No path found
     }
 
     /**
-     * Constructs the path from source to destination using parent mapping.
+     * Reconstructs the path from source to destination using the parent mapping.
+     * For each (parent, child) pair, it looks up the corresponding weighted edge.
      */
-    private List<GraphImpl.Edge> constructPath(Map<String, String> parentMap, String source, String destination) {
+    private List<GraphImpl.Edge> constructPath(GraphImpl graph, Map<String, String> parentMap, String source, String destination) {
         List<GraphImpl.Edge> path = new ArrayList<>();
         String current = destination;
 
@@ -58,11 +58,22 @@ public class DfsPathFinder implements PathFinder {
             if (parent == null) {
                 return new ArrayList<>(); // Path reconstruction failed
             }
-            path.add(new GraphImpl.Edge(parent, current));
+            // Look up the edge from parent to current.
+            GraphImpl.Edge foundEdge = null;
+            for (GraphImpl.Edge edge : graph.getAdjacencyList().get(parent)) {
+                if (edge.neighbor.equals(current)) {
+                    foundEdge = edge;
+                    break;
+                }
+            }
+            // If for some reason the edge is not found, create a default one (weight 0).
+            if (foundEdge == null) {
+                foundEdge = new GraphImpl.Edge(current, 0);
+            }
+            path.add(foundEdge);
             current = parent;
         }
-
-        Collections.reverse(path); // Reverse to correct order
+        Collections.reverse(path); // Reverse to get correct order from source to destination
         return path;
     }
 }
