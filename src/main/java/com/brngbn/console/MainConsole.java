@@ -8,7 +8,8 @@ import com.brngbn.thread.ThreadPoolManager;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.*;
-import java.util.List;
+import java.util.*;
+import java.util.PriorityQueue;
 import java.util.Scanner;
 
 @Slf4j
@@ -74,7 +75,8 @@ public class MainConsole {
         } else if (query.startsWith("edge ")) {
             timeMeasurer.startTracking(timerName);
             handleEdgeQuery(query.substring(5), graph);
-        } else if (query.startsWith("path ")) {
+        } else if (query.startsWith("path ") || query.startsWith("prime-path ")
+                || query.startsWith("shortest-path ") || query.startsWith("shortest-prime-path ")) {
             timeMeasurer.startTracking(timerName);
             handlePathQuery(query, graph);
         } else if (query.startsWith("parallel ")) {
@@ -116,25 +118,203 @@ public class MainConsole {
         }
     }
 
+    /**
+     * Handles path queries:
+     *   - "path x y": any path (DFS)
+     *   - "prime-path x y": DFS search for a prime weighted path (tries alternative paths)
+     *   - "shortest-path x y": shortest path (Dijkstra’s algorithm)
+     *   - "shortest-prime-path x y": shortest path among those with prime total weight
+     */
     private static void handlePathQuery(String pathQuery, GraphImpl graph) {
         String[] parts = pathQuery.split(" ");
-        if (parts.length == 3) {
-            String source = parts[1];
-            String dest = parts[2];
-
-            PathFinder pathFinder = useParallel ? new DfsPathFinderThreaded() : new DfsPathFinder();
-            List<GraphImpl.Edge> path = pathFinder.findPath(graph, source, dest);
-
-            if (path.isEmpty()) {
-                System.out.println("No path found between " + source + " and " + dest);
-            } else {
-                System.out.println("Path between " + source + " and " + dest + ":");
-                path.forEach(edge -> System.out.print("(" + edge + ") "));
-                System.out.println();
-            }
-        } else {
-            System.out.println("Invalid query format for path.");
+        if (parts.length != 3) {
+            System.out.println("Invalid query format for path queries.");
+            return;
         }
+        String queryType = parts[0];
+        String source = parts[1];
+        String dest = parts[2];
+
+        List<GraphImpl.Edge> path;
+        switch (queryType) {
+            case "path":
+                PathFinder dfsPathFinder = useParallel ? new DfsPathFinderThreaded() : new DfsPathFinder();
+                path = dfsPathFinder.findPath(graph, source, dest);
+                break;
+            case "prime-path":
+                path = findPrimePath(graph, source, dest);
+                break;
+            case "shortest-path":
+                path = findShortestPath(graph, source, dest);
+                break;
+            case "shortest-prime-path":
+                path = findShortestPrimePath(graph, source, dest);
+                break;
+            default:
+                System.out.println("Invalid path query type.");
+                return;
+        }
+
+        if (path.isEmpty()) {
+            if (queryType.equals("prime-path") || queryType.equals("shortest-prime-path"))
+                System.out.println("No prime path from " + source + " to " + dest);
+            else
+                System.out.println("No path found between " + source + " and " + dest);
+            return;
+        }
+
+        int totalWeight = path.stream().mapToInt(edge -> edge.weight).sum();
+        // For prime queries, our helper methods ensure that the returned path has prime weight.
+        StringBuilder sb = new StringBuilder();
+        sb.append(queryType).append(": ").append(source);
+        for (GraphImpl.Edge edge : path) {
+            sb.append(" -> ").append(edge.neighbor);
+        }
+        sb.append(" with weight/length = ").append(totalWeight);
+        System.out.println(sb.toString());
+    }
+
+    /**
+     * Uses recursive DFS to find the first simple path from source to dest with a prime total weight.
+     */
+    private static List<GraphImpl.Edge> findPrimePath(GraphImpl graph, String source, String dest) {
+        Set<String> visited = new HashSet<>();
+        List<GraphImpl.Edge> result = dfsFindPrimePath(graph, source, dest, visited, new ArrayList<>());
+        return result == null ? new ArrayList<>() : result;
+    }
+
+
+    private static List<GraphImpl.Edge> dfsFindPrimePath(GraphImpl graph, String current, String dest,
+                                                         Set<String> visited, List<GraphImpl.Edge> path) {
+        if (current.equals(dest)) {
+            int total = path.stream().mapToInt(edge -> edge.weight).sum();
+            if (isPrime(total))
+                return new ArrayList<>(path);
+            else
+                return null;
+        }
+        visited.add(current);
+        List<GraphImpl.Edge> edges = graph.getAdjacencyList().getOrDefault(current, new LinkedList<>());
+        for (GraphImpl.Edge edge : edges) {
+            if (!visited.contains(edge.neighbor)) {
+                path.add(edge);
+                List<GraphImpl.Edge> result = dfsFindPrimePath(graph, edge.neighbor, dest, visited, path);
+                if (result != null)
+                    return result;
+                path.remove(path.size() - 1);
+            }
+        }
+        visited.remove(current);
+        return null;
+    }
+
+    /**
+     * Uses Dijkstra's algorithm to find the shortest path (by total weight) from source to dest.
+     */
+    private static List<GraphImpl.Edge> findShortestPath(GraphImpl graph, String source, String dest) {
+        Map<String, Integer> dist = new HashMap<>();
+        Map<String, String> prev = new HashMap<>();
+        PriorityQueue<String> queue = new PriorityQueue<>(Comparator.comparingInt(dist::get));
+
+        for (String node : graph.getNodeList()) {
+            dist.put(node, Integer.MAX_VALUE);
+        }
+        dist.put(source, 0);
+        queue.add(source);
+
+        while (!queue.isEmpty()) {
+            String u = queue.poll();
+            if (u.equals(dest)) break;
+            List<GraphImpl.Edge> edges = graph.getAdjacencyList().getOrDefault(u, new LinkedList<>());
+            for (GraphImpl.Edge edge : edges) {
+                String v = edge.neighbor;
+                int alt = dist.get(u) + edge.weight;
+                if (alt < dist.getOrDefault(v, Integer.MAX_VALUE)) {
+                    dist.put(v, alt);
+                    prev.put(v, u);
+                    queue.remove(v);
+                    queue.add(v);
+                }
+            }
+        }
+
+        List<GraphImpl.Edge> path = new ArrayList<>();
+        if (!prev.containsKey(dest)) return path;
+        String current = dest;
+        while (!current.equals(source)) {
+            String parent = prev.get(current);
+            if (parent == null) return new ArrayList<>();
+            GraphImpl.Edge foundEdge = null;
+            for (GraphImpl.Edge edge : graph.getAdjacencyList().get(parent)) {
+                if (edge.neighbor.equals(current)) {
+                    foundEdge = edge;
+                    break;
+                }
+            }
+            if (foundEdge == null) foundEdge = new GraphImpl.Edge(current, 0);
+            path.add(foundEdge);
+            current = parent;
+        }
+        Collections.reverse(path);
+        return path;
+    }
+
+    /**
+     * Enumerates all simple paths from source to dest and returns the one with prime total weight and minimum weight.
+     */
+    private static List<GraphImpl.Edge> findShortestPrimePath(GraphImpl graph, String source, String dest) {
+        List<List<GraphImpl.Edge>> allPaths = new ArrayList<>();
+        dfsFindAllPaths(graph, source, dest, new HashSet<>(), new ArrayList<>(), allPaths);
+        List<List<GraphImpl.Edge>> primePaths = new ArrayList<>();
+        for (List<GraphImpl.Edge> path : allPaths) {
+            int total = path.stream().mapToInt(edge -> edge.weight).sum();
+            if (isPrime(total))
+                primePaths.add(path);
+        }
+        if (primePaths.isEmpty()) return new ArrayList<>();
+        List<GraphImpl.Edge> best = null;
+        int bestWeight = Integer.MAX_VALUE;
+        for (List<GraphImpl.Edge> path : primePaths) {
+            int total = path.stream().mapToInt(edge -> edge.weight).sum();
+            if (total < bestWeight) {
+                bestWeight = total;
+                best = path;
+            }
+        }
+        return best == null ? new ArrayList<>() : best;
+    }
+
+    private static void dfsFindAllPaths(GraphImpl graph, String current, String dest,
+                                        Set<String> visited, List<GraphImpl.Edge> currentPath,
+                                        List<List<GraphImpl.Edge>> allPaths) {
+        if (current.equals(dest)) {
+            allPaths.add(new ArrayList<>(currentPath));
+            return;
+        }
+        visited.add(current);
+        List<GraphImpl.Edge> edges = graph.getAdjacencyList().getOrDefault(current, new LinkedList<>());
+        for (GraphImpl.Edge edge : edges) {
+            if (!visited.contains(edge.neighbor)) {
+                currentPath.add(edge);
+                dfsFindAllPaths(graph, edge.neighbor, dest, visited, currentPath, allPaths);
+                currentPath.removeLast();
+            }
+        }
+        visited.remove(current);
+    }
+
+    /**
+     * Returns true if n is a prime number.
+     */
+    private static boolean isPrime(int n) {
+        if (n <= 1) return false;
+        if (n <= 3) return true;
+        if (n % 2 == 0 || n % 3 == 0) return false;
+        for (int i = 5; i * i <= n; i += 6) {
+            if (n % i == 0 || n % (i + 2) == 0)
+                return false;
+        }
+        return true;
     }
 
     private static void asciiHeader() {

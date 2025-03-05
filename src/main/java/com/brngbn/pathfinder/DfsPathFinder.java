@@ -31,7 +31,7 @@ public class DfsPathFinder implements PathFinder {
                 return constructPath(graph, parentMap, source, destination);
             }
 
-            // Use a new LinkedList as default
+            // Use a new LinkedList as default so the type matches
             List<GraphImpl.Edge> edges = graph.getAdjacencyList().getOrDefault(current, new LinkedList<>());
             for (GraphImpl.Edge edge : edges) {
                 String neighbor = edge.neighbor; // Use the neighbor field
@@ -66,7 +66,7 @@ public class DfsPathFinder implements PathFinder {
                     break;
                 }
             }
-            // If for some reason the edge is not found, create a default one (weight 0).
+            // If for some reason the edge is not found, create a default one (weight 0)
             if (foundEdge == null) {
                 foundEdge = new GraphImpl.Edge(current, 0);
             }
