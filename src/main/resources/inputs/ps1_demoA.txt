@@ -1,0 +1,17 @@
+node 999999xyz
+node 5000000xyz
+node 6000000xyz
+node 5000001xyz
+edge 57xyz 58xyz
+edge 1234567xyz 1234568xyz
+edge 5000000xyz 1xyz
+edge 1000xyz 999xyz
+parallel 1
+node 999999xyz
+node 5000000xyz
+node 6000000xyz
+node 5000001xyz
+edge 57xyz 58xyz
+edge 1234567xyz 1234568xyz
+edge 5000000xyz 1xyz
+edge 1000xyz 999xyz

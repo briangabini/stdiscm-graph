@@ -1,0 +1,9 @@
+path 1gr 100gr
+path 100gr 10110gr
+path 10110gr 100gr
+path 100gr 12100gr
+parallel 1
+path 1gr 100gr
+path 100gr 10110gr
+path 10110gr 100gr
+path 100gr 12100gr
