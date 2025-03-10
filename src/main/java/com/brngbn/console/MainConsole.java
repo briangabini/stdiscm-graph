@@ -7,10 +7,16 @@ import com.brngbn.pathfinder.PathFinder;
 import com.brngbn.thread.ThreadPoolManager;
 import lombok.extern.slf4j.Slf4j;
 
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
+
+
 import java.io.*;
 import java.util.*;
 import java.util.PriorityQueue;
 import java.util.Scanner;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 @Slf4j
 public class MainConsole {
@@ -22,6 +28,10 @@ public class MainConsole {
     private static boolean useParallel = false;
 
     private final static String inputDirectory = "src/main/resources/inputs/";
+
+    private static final ExecutorService executorService = Executors.newFixedThreadPool(6);
+    // or
+    // private static final ExecutorService executorService = Executors.newCachedThreadPool();
 
     public static void handleUserQueries(GraphImpl graph) {
         asciiHeader();
@@ -142,7 +152,8 @@ public class MainConsole {
                 path = dfsPathFinder.findPath(graph, source, dest);
                 break;
             case "prime-path":
-                path = findPrimePath(graph, source, dest);
+                // Use the parallelized findPrimePath if useParallel is true, otherwise use the regular one
+                path = useParallel ? findPrimePathWithThreadPool(graph, source, dest) : findPrimePath(graph, source, dest);
                 break;
             case "shortest-path":
                 path = findShortestPath(graph, source, dest);
@@ -204,6 +215,59 @@ public class MainConsole {
                 path.remove(path.size() - 1);
             }
         }
+        visited.remove(current);
+        return null;
+    }
+
+    /**
+     * Uses recursive DFS to find the first simple path from source to dest with a prime total weight.
+     */
+    private static List<GraphImpl.Edge> findPrimePathWithThreadPool(GraphImpl graph, String source, String dest) {
+        Set<String> visited = new HashSet<>();
+        List<GraphImpl.Edge> result = dfsFindPrimePathWithThreadPool(graph, source, dest, visited, new ArrayList<>());
+        return result == null ? new ArrayList<>() : result;
+    }
+
+    /**
+     * Prime Path Parallel - Uses recursive DFS to find the first simple path from source to dest with a prime total weight.
+     */
+    private static List<GraphImpl.Edge> dfsFindPrimePathWithThreadPool(GraphImpl graph, String current, String dest,
+                                                                       Set<String> visited, List<GraphImpl.Edge> path) {
+        if (current.equals(dest)) {
+            int total = path.stream().mapToInt(edge -> edge.weight).sum();
+            if (isPrime(total))
+                return new ArrayList<>(path);
+            else
+                return null;
+        }
+
+        visited.add(current);
+        List<GraphImpl.Edge> edges = graph.getAdjacencyList().getOrDefault(current, new LinkedList<>());
+
+        List<Future<List<GraphImpl.Edge>>> futures = new ArrayList<>();
+
+        // Submit each recursive DFS call as a separate task
+        for (GraphImpl.Edge edge : edges) {
+            if (!visited.contains(edge.neighbor)) {
+                path.add(edge);
+                // Submit the DFS task as a future
+                futures.add(executorService.submit(() -> dfsFindPrimePathWithThreadPool(graph, edge.neighbor, dest, visited, path)));
+            }
+        }
+
+        // Collect the results
+        for (Future<List<GraphImpl.Edge>> future : futures) {
+            try {
+                List<GraphImpl.Edge> result = future.get();
+                if (result != null) {
+                    executorService.shutdownNow(); // Optionally, shut down if a valid result is found.
+                    return result;
+                }
+            } catch (InterruptedException | ExecutionException e) {
+                e.printStackTrace();
+            }
+        }
+
         visited.remove(current);
         return null;
     }
