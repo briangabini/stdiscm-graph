@@ -7,16 +7,13 @@ import com.brngbn.pathfinder.PathFinder;
 import com.brngbn.thread.ThreadPoolManager;
 import lombok.extern.slf4j.Slf4j;
 
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Future;
+import java.util.concurrent.*;
 
 
 import java.io.*;
 import java.util.*;
 import java.util.PriorityQueue;
 import java.util.Scanner;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 @Slf4j
 public class MainConsole {
@@ -29,7 +26,7 @@ public class MainConsole {
 
     private final static String inputDirectory = "src/main/resources/inputs/";
 
-    private static final ExecutorService executorService = Executors.newFixedThreadPool(6);
+    private static final ExecutorService executor = Executors.newFixedThreadPool(6);
     // or
     // private static final ExecutorService executorService = Executors.newCachedThreadPool();
 
@@ -156,7 +153,7 @@ public class MainConsole {
                 path = useParallel ? findPrimePathWithThreadPool(graph, source, dest) : findPrimePath(graph, source, dest);
                 break;
             case "shortest-path":
-                path = findShortestPath(graph, source, dest);
+                path = useParallel ? findShortestPathThreaded(graph, source, dest) : findShortestPath(graph, source, dest);
                 break;
             case "shortest-prime-path":
                 path = findShortestPrimePath(graph, source, dest);
@@ -251,7 +248,7 @@ public class MainConsole {
             if (!visited.contains(edge.neighbor)) {
                 path.add(edge);
                 // Submit the DFS task as a future
-                futures.add(executorService.submit(() -> dfsFindPrimePathWithThreadPool(graph, edge.neighbor, dest, visited, path)));
+                futures.add(executor.submit(() -> dfsFindPrimePathWithThreadPool(graph, edge.neighbor, dest, visited, path)));
             }
         }
 
@@ -260,7 +257,7 @@ public class MainConsole {
             try {
                 List<GraphImpl.Edge> result = future.get();
                 if (result != null) {
-                    executorService.shutdownNow(); // Optionally, shut down if a valid result is found.
+                    executor.shutdownNow(); // Optionally, shut down if a valid result is found.
                     return result;
                 }
             } catch (InterruptedException | ExecutionException e) {
@@ -322,6 +319,80 @@ public class MainConsole {
         Collections.reverse(path);
         return path;
     }
+
+    public static List<GraphImpl.Edge> findShortestPathThreaded(GraphImpl graph, String source, String dest) {
+        Map<String, Integer> dist = new ConcurrentHashMap<>();
+        Map<String, String> prev = new ConcurrentHashMap<>();
+        PriorityQueue<String> queue = new PriorityQueue<>(Comparator.comparingInt(dist::get));
+
+        try {
+            for (String node : graph.getNodeList()) {
+                dist.put(node, Integer.MAX_VALUE);
+            }
+            dist.put(source, 0);
+            queue.add(source);
+
+            while (!queue.isEmpty()) {
+                String u = queue.poll();
+                if (u.equals(dest)) break;
+                List<GraphImpl.Edge> edges = graph.getAdjacencyList().getOrDefault(u, new LinkedList<>());
+
+                List<Future<?>> futures = new ArrayList<>();
+                for (GraphImpl.Edge edge : edges) {
+                    futures.add(executor.submit(() -> {
+                        String v = edge.neighbor;
+                        int alt = dist.get(u) + edge.weight;
+                        synchronized (dist) { // Synchronization ensures thread safety for distance updates
+                            if (alt < dist.getOrDefault(v, Integer.MAX_VALUE)) {
+                                dist.put(v, alt);
+                                prev.put(v, u);
+                                synchronized (queue) {
+                                    queue.remove(v); // Remove and re-add to maintain proper priority order
+                                    queue.add(v);
+                                }
+                            }
+                        }
+                    }));
+                }
+
+                for (Future<?> future : futures) {
+                    try {
+                        future.get(); // Ensure all threads finish processing before proceeding
+                    } catch (InterruptedException | ExecutionException e) {
+                        Thread.currentThread().interrupt(); // Preserve interrupt status
+                        e.printStackTrace();
+                    }
+                }
+            }
+
+            executor.shutdown();
+            executor.awaitTermination(1, TimeUnit.MINUTES);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            e.printStackTrace();
+        }
+
+        List<GraphImpl.Edge> path = new ArrayList<>();
+        if (!prev.containsKey(dest)) return path;
+        String current = dest;
+        while (!current.equals(source)) {
+            String parent = prev.get(current);
+            if (parent == null) return new ArrayList<>();
+            GraphImpl.Edge foundEdge = null;
+            for (GraphImpl.Edge edge : graph.getAdjacencyList().get(parent)) {
+                if (edge.neighbor.equals(current)) {
+                    foundEdge = edge;
+                    break;
+                }
+            }
+            if (foundEdge == null) foundEdge = new GraphImpl.Edge(current, 0);
+            path.add(foundEdge);
+            current = parent;
+        }
+        Collections.reverse(path);
+        return path;
+    }
+
 
     /**
      * Enumerates all simple paths from source to dest and returns the one with prime total weight and minimum weight.
