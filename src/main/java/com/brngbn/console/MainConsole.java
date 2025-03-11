@@ -156,7 +156,7 @@ public class MainConsole {
                 path = useParallel ? findShortestPathThreaded(graph, source, dest) : findShortestPath(graph, source, dest);
                 break;
             case "shortest-prime-path":
-                path = findShortestPrimePath(graph, source, dest);
+                path = useParallel ? findShortestPrimePathThreaded(graph, source, dest) : findShortestPrimePath(graph, source, dest);
                 break;
             default:
                 System.out.println("Invalid path query type.");
@@ -436,6 +436,33 @@ public class MainConsole {
             }
         }
         visited.remove(current);
+    }
+
+    private static List<GraphImpl.Edge> findShortestPrimePathThreaded(GraphImpl graph, String source, String dest) {
+        List<List<GraphImpl.Edge>> allPaths = new ArrayList<>();
+        dfsFindAllPaths(graph, source, dest, new HashSet<>(), new ArrayList<>(), allPaths);
+
+        List<Future<List<GraphImpl.Edge>>> futures = new ArrayList<>();
+
+        for (List<GraphImpl.Edge> path : allPaths) {
+            futures.add(executor.submit(() -> isPrime(path.stream().mapToInt(edge -> edge.weight).sum()) ? path : null));
+        }
+
+        List<List<GraphImpl.Edge>> primePaths = new ArrayList<>();
+        for (Future<List<GraphImpl.Edge>> future : futures) {
+            try {
+                List<GraphImpl.Edge> path = future.get();
+                if (path != null) primePaths.add(path);
+            } catch (InterruptedException | ExecutionException e) {
+                e.printStackTrace();
+            }
+        }
+
+        executor.shutdown();
+
+        if (primePaths.isEmpty()) return new ArrayList<>();
+
+        return primePaths.stream().min(Comparator.comparingInt(path -> path.stream().mapToInt(edge -> edge.weight).sum())).orElse(new ArrayList<>());
     }
 
     /**
