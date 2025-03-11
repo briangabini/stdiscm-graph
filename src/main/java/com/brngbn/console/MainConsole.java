@@ -26,7 +26,7 @@ public class MainConsole {
 
     private final static String inputDirectory = "src/main/resources/inputs/";
 
-    private static final ExecutorService executor = Executors.newFixedThreadPool(6);
+//    private static final ExecutorService executor = Executors.newFixedThreadPool(6);
     // or
     // private static final ExecutorService executorService = Executors.newCachedThreadPool();
 
@@ -150,7 +150,7 @@ public class MainConsole {
                 break;
             case "prime-path":
                 // Use the parallelized findPrimePath if useParallel is true, otherwise use the regular one
-                path = useParallel ? findPrimePathWithThreadPool(graph, source, dest) : findPrimePath(graph, source, dest);
+                path = useParallel ? findPrimePathThreaded(graph, source, dest) : findPrimePath(graph, source, dest);
                 break;
             case "shortest-path":
                 path = useParallel ? findShortestPathThreaded(graph, source, dest) : findShortestPath(graph, source, dest);
@@ -216,59 +216,56 @@ public class MainConsole {
         return null;
     }
 
-    /**
-     * Uses recursive DFS to find the first simple path from source to dest with a prime total weight.
-     */
-    private static List<GraphImpl.Edge> findPrimePathWithThreadPool(GraphImpl graph, String source, String dest) {
-        Set<String> visited = new HashSet<>();
-        List<GraphImpl.Edge> result = dfsFindPrimePathWithThreadPool(graph, source, dest, visited, new ArrayList<>());
-        return result == null ? new ArrayList<>() : result;
+    public static List<GraphImpl.Edge> findPrimePathThreaded(GraphImpl graph, String source, String dest) {
+        Set<String> visited = ConcurrentHashMap.newKeySet();
+        try {
+            List<GraphImpl.Edge> result = dfsFindPrimePathThreaded(graph, source, dest, visited, new ArrayList<>()).get();
+            return result == null ? new ArrayList<>() : result;
+        } catch (InterruptedException | ExecutionException e) {
+            e.printStackTrace();
+            return new ArrayList<>();
+        }
     }
 
-    /**
-     * Prime Path Parallel - Uses recursive DFS to find the first simple path from source to dest with a prime total weight.
-     */
-    private static List<GraphImpl.Edge> dfsFindPrimePathWithThreadPool(GraphImpl graph, String current, String dest,
-                                                                       Set<String> visited, List<GraphImpl.Edge> path) {
-        if (current.equals(dest)) {
-            int total = path.stream().mapToInt(edge -> edge.weight).sum();
-            if (isPrime(total))
-                return new ArrayList<>(path);
-            else
-                return null;
-        }
-
-        visited.add(current);
-        List<GraphImpl.Edge> edges = graph.getAdjacencyList().getOrDefault(current, new LinkedList<>());
-
-        List<Future<List<GraphImpl.Edge>>> futures = new ArrayList<>();
-
-        // Submit each recursive DFS call as a separate task
-        for (GraphImpl.Edge edge : edges) {
-            if (!visited.contains(edge.neighbor)) {
-                path.add(edge);
-                // Submit the DFS task as a future
-                futures.add(executor.submit(() -> dfsFindPrimePathWithThreadPool(graph, edge.neighbor, dest, visited, path)));
-            }
-        }
-
-        // Collect the results
-        for (Future<List<GraphImpl.Edge>> future : futures) {
+    private static Future<List<GraphImpl.Edge>> dfsFindPrimePathThreaded(GraphImpl graph, String current, String dest,
+                                                                 Set<String> visited, List<GraphImpl.Edge> path) {
+        ExecutorService executor = Executors.newCachedThreadPool();
+        return executor.submit(() -> {
             try {
-                List<GraphImpl.Edge> result = future.get();
-                if (result != null) {
-                    executor.shutdownNow(); // Optionally, shut down if a valid result is found.
-                    return result;
+                if (current.equals(dest)) {
+                    int total = path.stream().mapToInt(edge -> edge.weight).sum();
+                    return isPrime(total) ? new ArrayList<>(path) : null;
                 }
-            } catch (InterruptedException | ExecutionException e) {
+
+                visited.add(current);
+                List<GraphImpl.Edge> edges = graph.getAdjacencyList().getOrDefault(current, new LinkedList<>());
+                List<Future<List<GraphImpl.Edge>>> futures = new ArrayList<>();
+
+                for (GraphImpl.Edge edge : edges) {
+                    if (!visited.contains(edge.neighbor)) {
+                        path.add(edge);
+                        futures.add(dfsFindPrimePathThreaded(graph, edge.neighbor, dest, visited, new ArrayList<>(path)));
+                        path.remove(path.size() - 1);
+                    }
+                }
+                visited.remove(current);
+
+                for (Future<List<GraphImpl.Edge>> future : futures) {
+                    try {
+                        List<GraphImpl.Edge> result = future.get();
+                        if (result != null) {
+                            return result;
+                        }
+                    } catch (InterruptedException | ExecutionException e) {
+                        e.printStackTrace();
+                    }
+                }
+            } catch (Exception e) {
                 e.printStackTrace();
             }
-        }
-
-        visited.remove(current);
-        return null;
+            return null;
+        });
     }
-
     /**
      * Uses Dijkstra's algorithm to find the shortest path (by total weight) from source to dest.
      */
@@ -321,6 +318,7 @@ public class MainConsole {
     }
 
     public static List<GraphImpl.Edge> findShortestPathThreaded(GraphImpl graph, String source, String dest) {
+        ExecutorService executor = Executors.newCachedThreadPool();
         Map<String, Integer> dist = new ConcurrentHashMap<>();
         Map<String, String> prev = new ConcurrentHashMap<>();
         PriorityQueue<String> queue = new PriorityQueue<>(Comparator.comparingInt(dist::get));
@@ -439,6 +437,7 @@ public class MainConsole {
     }
 
     private static List<GraphImpl.Edge> findShortestPrimePathThreaded(GraphImpl graph, String source, String dest) {
+        ExecutorService executor = Executors.newCachedThreadPool();
         List<List<GraphImpl.Edge>> allPaths = new ArrayList<>();
         dfsFindAllPaths(graph, source, dest, new HashSet<>(), new ArrayList<>(), allPaths);
 
