@@ -7,12 +7,10 @@ import java.util.concurrent.*;
 
 public class PathFindingService {
 
-    public List<GraphImpl.Edge> findPath(GraphImpl graph, String queryType, String source, String dest, boolean useParallel) {
+    public List<GraphImpl.Edge> findPathQuery(GraphImpl graph, String queryType, String source, String dest, boolean useParallel) {
         switch(queryType) {
             case "path":
-                // Delegate to the existing DFS path finder
-                PathFinder dfsPathFinder = useParallel ? new DfsPathFinderThreaded() : new DfsPathFinder();
-                return dfsPathFinder.findPath(graph, source, dest);
+                return useParallel ? findPathThreaded(graph, source, dest) : findPath(graph, source, dest);
             case "prime-path":
                 return useParallel ? findPrimePathThreaded(graph, source, dest) : findPrimePath(graph, source, dest);
             case "shortest-path":
@@ -22,6 +20,75 @@ public class PathFindingService {
             default:
                 return Collections.emptyList();
         }
+    }
+
+    public List<GraphImpl.Edge> findPath(GraphImpl graph, String source, String dest) {
+        Set<String> visited = new HashSet<>();
+        List<GraphImpl.Edge> result = dfsFindPath(graph, source, dest, visited, new ArrayList<>());
+        return result == null ? new ArrayList<>() : result;
+    }
+
+    private List<GraphImpl.Edge> dfsFindPath(GraphImpl graph, String current, String dest,
+                                             Set<String> visited, List<GraphImpl.Edge> path) {
+        if (current.equals(dest)) {
+            return new ArrayList<>(path);
+        }
+        visited.add(current);
+        List<GraphImpl.Edge> edges = graph.getAdjacencyList().getOrDefault(current, new LinkedList<>());
+        for (GraphImpl.Edge edge : edges) {
+            if (!visited.contains(edge.neighbor)) {
+                path.add(edge);
+                List<GraphImpl.Edge> result = dfsFindPath(graph, edge.neighbor, dest, visited, path);
+                if (result != null)
+                    return result;
+                path.remove(path.size() - 1);
+            }
+        }
+        visited.remove(current);
+        return null;
+    }
+
+    public List<GraphImpl.Edge> findPathThreaded(GraphImpl graph, String source, String dest) {
+        Set<String> visited = ConcurrentHashMap.newKeySet();
+        try {
+            List<GraphImpl.Edge> result = dfsFindPathThreaded(graph, source, dest, visited, new ArrayList<>()).get();
+            return result == null ? new ArrayList<>() : result;
+        } catch (InterruptedException | ExecutionException e) {
+            e.printStackTrace();
+            return new ArrayList<>();
+        }
+    }
+
+    private Future<List<GraphImpl.Edge>> dfsFindPathThreaded(GraphImpl graph, String current, String dest,
+                                                             Set<String> visited, List<GraphImpl.Edge> path) {
+        ExecutorService executor = Executors.newCachedThreadPool();
+        return executor.submit(() -> {
+            if (current.equals(dest)) {
+                return new ArrayList<>(path);
+            }
+            visited.add(current);
+            List<GraphImpl.Edge> edges = graph.getAdjacencyList().getOrDefault(current, new LinkedList<>());
+            List<Future<List<GraphImpl.Edge>>> futures = new ArrayList<>();
+            for (GraphImpl.Edge edge : edges) {
+                if (!visited.contains(edge.neighbor)) {
+                    path.add(edge);
+                    futures.add(dfsFindPathThreaded(graph, edge.neighbor, dest, visited, new ArrayList<>(path)));
+                    path.remove(path.size() - 1);
+                }
+            }
+            visited.remove(current);
+            for (Future<List<GraphImpl.Edge>> future : futures) {
+                try {
+                    List<GraphImpl.Edge> result = future.get();
+                    if (result != null) {
+                        return result;
+                    }
+                } catch (InterruptedException | ExecutionException e) {
+                    e.printStackTrace();
+                }
+            }
+            return null;
+        });
     }
 
     /**

@@ -1,19 +1,13 @@
 package com.brngbn.console;
 
 import com.brngbn.graph.GraphImpl;
-import com.brngbn.pathfinder.DfsPathFinder;
-import com.brngbn.pathfinder.DfsPathFinderThreaded;
-import com.brngbn.pathfinder.PathFinder;
 import com.brngbn.pathfinder.PathFindingService;
 import com.brngbn.thread.ThreadPoolManager;
 import lombok.extern.slf4j.Slf4j;
 
-import java.util.concurrent.*;
-
 
 import java.io.*;
 import java.util.*;
-import java.util.PriorityQueue;
 import java.util.Scanner;
 
 @Slf4j
@@ -138,7 +132,7 @@ public class MainConsole {
         String dest = parts[2];
 
         PathFindingService service = new PathFindingService();
-        List<GraphImpl.Edge> path = service.findPath(graph, queryType, source, dest, useParallel);
+        List<GraphImpl.Edge> path = service.findPathQuery(graph, queryType, source, dest, useParallel);
 
         if (path.isEmpty()) {
             if (queryType.equals("prime-path") || queryType.equals("shortest-prime-path"))
