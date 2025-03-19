@@ -1,23 +1,20 @@
 package com.brngbn.console;
 
 import com.brngbn.graph.GraphImpl;
-import com.brngbn.pathfinder.DfsPathFinder;
-import com.brngbn.pathfinder.DfsPathFinderThreaded;
-import com.brngbn.pathfinder.PathFinder;
+import com.brngbn.pathfinder.PathFindingService;
 import com.brngbn.thread.ThreadPoolManager;
 import lombok.extern.slf4j.Slf4j;
 
+
 import java.io.*;
-import java.util.List;
+import java.util.*;
 import java.util.Scanner;
 
 @Slf4j
 public class MainConsole {
 
-    // Debug mode
     private static final boolean debug = true;
 
-    // Flag to control parallel execution
     private static boolean useParallel = false;
 
     private final static String inputDirectory = "src/main/resources/inputs/";
@@ -74,7 +71,8 @@ public class MainConsole {
         } else if (query.startsWith("edge ")) {
             timeMeasurer.startTracking(timerName);
             handleEdgeQuery(query.substring(5), graph);
-        } else if (query.startsWith("path ")) {
+        } else if (query.startsWith("path ") || query.startsWith("prime-path ")
+                || query.startsWith("shortest-path ") || query.startsWith("shortest-prime-path ")) {
             timeMeasurer.startTracking(timerName);
             handlePathQuery(query, graph);
         } else if (query.startsWith("parallel ")) {
@@ -116,25 +114,43 @@ public class MainConsole {
         }
     }
 
+    /**
+     * Handles path queries:
+     *   - "path x y": any path (DFS)
+     *   - "prime-path x y": DFS search for a prime weighted path (tries alternative paths)
+     *   - "shortest-path x y": shortest path (Dijkstra’s algorithm)
+     *   - "shortest-prime-path x y": shortest path among those with prime total weight
+     */
     private static void handlePathQuery(String pathQuery, GraphImpl graph) {
         String[] parts = pathQuery.split(" ");
-        if (parts.length == 3) {
-            String source = parts[1];
-            String dest = parts[2];
-
-            PathFinder pathFinder = useParallel ? new DfsPathFinderThreaded() : new DfsPathFinder();
-            List<GraphImpl.Edge> path = pathFinder.findPath(graph, source, dest);
-
-            if (path.isEmpty()) {
-                System.out.println("No path found between " + source + " and " + dest);
-            } else {
-                System.out.println("Path between " + source + " and " + dest + ":");
-                path.forEach(edge -> System.out.print("(" + edge + ") "));
-                System.out.println();
-            }
-        } else {
-            System.out.println("Invalid query format for path.");
+        if (parts.length != 3) {
+            System.out.println("Invalid query format for path queries.");
+            return;
         }
+        String queryType = parts[0];
+        String source = parts[1];
+        String dest = parts[2];
+
+        PathFindingService service = new PathFindingService();
+        List<GraphImpl.Edge> path = service.findPathQuery(graph, queryType, source, dest, useParallel);
+
+        if (path.isEmpty()) {
+            if (queryType.equals("prime-path") || queryType.equals("shortest-prime-path"))
+                System.out.println("No prime path from " + source + " to " + dest);
+            else
+                System.out.println("No path found between " + source + " and " + dest);
+            return;
+        }
+
+        int totalWeight = path.stream().mapToInt(edge -> edge.weight).sum();
+        // For prime queries, our helper methods ensure that the returned path has prime weight.
+        StringBuilder sb = new StringBuilder();
+        sb.append(queryType).append(": ").append(source);
+        for (GraphImpl.Edge edge : path) {
+            sb.append(" -> ").append(edge.neighbor);
+        }
+        sb.append(" with weight/length = ").append(totalWeight);
+        System.out.println(sb.toString());
     }
 
     private static void asciiHeader() {
