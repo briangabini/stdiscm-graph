@@ -1,5 +1,7 @@
 package com.brngbn.console;
 
+import com.brngbn.agent.AgentSimulator;
+import com.brngbn.graph.GraphConfigParser;
 import com.brngbn.graph.GraphImpl;
 import com.brngbn.pathfinder.PathFindingService;
 import com.brngbn.thread.ThreadPoolManager;
@@ -79,7 +81,7 @@ public class MainConsole {
             timeMeasurer.startTracking(timerName);
             handleParallelCommand(query);
         } else if (query.equals("simulate-agents")) {
-            handleSimulateAgents(query);
+            handleSimulateAgents(graph);
         } else {
             System.out.println("Invalid query.");
             return;
@@ -88,10 +90,12 @@ public class MainConsole {
         timeMeasurer.calculateAndPrintDuration(timerName);
     }
 
-    // TODO: implement this functionality
-    private static void handleSimulateAgents(String query) {
+    private static void handleSimulateAgents(GraphImpl graph) {
 
+        Map<String, String> agentLocations = GraphConfigParser.getInstance().getAgentLocations();       // Retrieve the agent mapping (agent label -> starting node) from the parser.
+        AgentSimulator.simulateAgents(graph, agentLocations);                                           // Start the simulation
     }
+
 
     private static void handleParallelCommand(String query) {
         try {
