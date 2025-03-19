@@ -6,10 +6,15 @@ import java.util.*;
 
 @Slf4j
 public class Agent implements Runnable {
+
     private final String label;
+
     private String currentNode;
+
     private final String destination;
+
     private final int allowedWeight;
+
     private final GraphImpl graph;
 
     public Agent(String label, String startNode, GraphImpl graph) {
@@ -26,50 +31,63 @@ public class Agent implements Runnable {
 
     @Override
     public void run() {
-
-        Random random = new Random();
         log.info("Agent {} starting run loop at node {}", label, currentNode);
 
         while (!currentNode.equals(destination)) {
-            boolean moved = false;
             List<GraphImpl.Edge> validEdges = getValidEdges();
+
             log.info("Agent {} at node {} found valid moves: {}", label, currentNode, validEdges);
-            if (validEdges.isEmpty()) {
-                log.warn("Agent {} at node {} has no valid moves. Stuck!", label, currentNode);
-                break;
-            }
+            if (!hasValidMoves(validEdges)) break;
+            shuffleEdges(validEdges);
 
-            Collections.shuffle(validEdges, random);            // Only used when there are 2 or more valid edges
-
+            boolean moved = false;
             for (GraphImpl.Edge edge : validEdges) {
                 String target = edge.neighbor;
-
-                synchronized (AgentSimulator.occupancyLock) {
-                    if (!AgentSimulator.occupancy.containsKey(target)) {
-                        log.info("Agent {} moving from {} to {}", label, currentNode, target);
-                        occupyValidNode(target);
-                        moved = true;
-                        break;
-                    } else {
-                        log.info("Agent {} cannot move to {} because it is occupied by {}", label, target, AgentSimulator.occupancy.get(target));
-                    }
-                }
+                moved = occupyValidNode(target);
+                if (moved) break;
             }
 
-            if (sleepAfterAction(moved)) break;
+            try {
+                sleepAfterAction(moved);
+            } catch(InterruptedException e) {
+                log.error("Error from run() - {}", e.toString());
+            }
         }
 
         handleAgentTermination();
     }
 
-    private void occupyValidNode(String target) {
-        // Move the agent: free the current node and occupy the target node.
-        AgentSimulator.occupancy.remove(currentNode);
-        AgentSimulator.occupancy.put(target, label);
-        currentNode = target;
+    private boolean hasValidMoves(List<GraphImpl.Edge> validEdges) {
+        if (validEdges.isEmpty()) {
+            log.warn("Agent {} at node {} has no valid moves. Stuck!", label, currentNode);
+            return false;
+        }
+        return true;
     }
 
-    private boolean sleepAfterAction(boolean moved) {
+    private static void shuffleEdges(List<GraphImpl.Edge> validEdges) {
+        Random random = new Random();
+        Collections.shuffle(validEdges, random);            // Select a node randomly, based on specs, edge at index 0 will be chosen
+    }
+
+    private boolean occupyValidNode(String target) {
+
+        synchronized (AgentSimulator.occupancyLock) {
+            if (!AgentSimulator.occupancy.containsKey(target)) {
+                log.info("Agent {} moving from {} to {}", label, currentNode, target);
+                // Move the agent: free the current node and occupy the target node.
+                AgentSimulator.occupancy.remove(currentNode);
+                AgentSimulator.occupancy.put(target, label);
+                currentNode = target;
+                return true;
+            } else {
+                log.info("Agent {} cannot move to {} because it is occupied by {}", label, target, AgentSimulator.occupancy.get(target));
+                return false;
+            }
+        }
+    }
+
+    private void sleepAfterAction(boolean moved) throws InterruptedException {
         if (!moved) {
 
             log.info("Agent {} did not move from {} as all valid moves are occupied. Waiting...", label, currentNode);
@@ -78,7 +96,6 @@ public class Agent implements Runnable {
             } catch (InterruptedException e) {
                 log.error("Agent {} interrupted while waiting.", label, e);
                 Thread.currentThread().interrupt();
-                return true;
             }
         } else {
 
@@ -87,10 +104,8 @@ public class Agent implements Runnable {
             } catch (InterruptedException e) {
                 log.error("Agent {} interrupted after moving.", label, e);
                 Thread.currentThread().interrupt();
-                return true;
             }
         }
-        return false;
     }
 
     private void handleAgentTermination() {
@@ -103,9 +118,6 @@ public class Agent implements Runnable {
         }
     }
 
-    /**
-     * Returns the list of valid edges from the current node that have the allowed weight.
-     */
     private List<GraphImpl.Edge> getValidEdges() {
         List<GraphImpl.Edge> edges = graph.getAdjacencyList().get(currentNode);
         List<GraphImpl.Edge> validEdges = new ArrayList<>();

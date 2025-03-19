@@ -17,21 +17,36 @@ public class AgentSimulator {
     public static final Object occupancyLock = new Object();                            // Lock used for synchronization
 
     public static void simulateAgents(GraphImpl graph, Map<String, String> initialAgentLocations) {
+        initialize(initialAgentLocations);
+        List<Thread> agentThreads = startThreads(graph, initialAgentLocations);
+        joinThreads(agentThreads);
+    }
+
+    private static List<Thread> startThreads(GraphImpl graph, Map<String, String> initialAgentLocations) {
+        List<Thread> agentThreads = new ArrayList<>();
+        for (Map.Entry<String, String> entry : initialAgentLocations.entrySet()) {
+            startThread(graph, entry, agentThreads);
+        }
+        return agentThreads;
+    }
+
+    private static void startThread(GraphImpl graph, Map.Entry<String, String> entry, List<Thread> agentThreads) {
+        String agentLabel = entry.getKey();
+        String startNode = entry.getValue();
+        Agent agent = new Agent(agentLabel, startNode, graph);
+        Thread t = new Thread(agent);
+        agentThreads.add(t);
+        log.info("Starting thread for agent {}", agentLabel);
+        t.start();
+    }
+
+    private static void initialize(Map<String, String> initialAgentLocations) {
         occupancy.clear();
         occupancy.putAll(initialAgentLocations);
         log.info("Initial occupancy map: {}", occupancy);
+    }
 
-        List<Thread> agentThreads = new ArrayList<>();
-        for (Map.Entry<String, String> entry : initialAgentLocations.entrySet()) {
-            String agentLabel = entry.getKey();
-            String startNode = entry.getValue();
-            Agent agent = new Agent(agentLabel, startNode, graph);
-            Thread t = new Thread(agent);
-            agentThreads.add(t);
-            log.info("Starting thread for agent {}", agentLabel);
-            t.start();
-        }
-
+    private static void joinThreads(List<Thread> agentThreads) {
         for (Thread t : agentThreads) {
             try {
                 t.join();
