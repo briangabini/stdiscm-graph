@@ -29,16 +29,10 @@ public class Agent implements Runnable {
     public void run() {
         Random random = new Random();
         log.info("Agent {} starting run loop at node {}", label, currentNode);
+
         while (!currentNode.equals(destination)) {
-            List<GraphImpl.Edge> edges = graph.getAdjacencyList().get(currentNode);
-            List<GraphImpl.Edge> validEdges = new ArrayList<>();
-            if (edges != null) {
-                for (GraphImpl.Edge edge : edges) {
-                    if (edge.weight == allowedWeight) {
-                        validEdges.add(edge);
-                    }
-                }
-            }
+
+            List<GraphImpl.Edge> validEdges = getValidEdges();
             log.info("Agent {} at node {} found valid moves: {}", label, currentNode, validEdges);
             if (validEdges.isEmpty()) {
                 log.warn("Agent {} at node {} has no valid moves. Stuck!", label, currentNode);
@@ -94,5 +88,21 @@ public class Agent implements Runnable {
         } else {
             log.info("Agent {} terminated without reaching its destination.", label);
         }
+    }
+
+    /**
+     * Returns the list of valid edges from the current node that have the allowed weight.
+     */
+    private List<GraphImpl.Edge> getValidEdges() {
+        List<GraphImpl.Edge> edges = graph.getAdjacencyList().get(currentNode);
+        List<GraphImpl.Edge> validEdges = new ArrayList<>();
+        if (edges != null) {
+            for (GraphImpl.Edge edge : edges) {
+                if (edge.weight == allowedWeight) {
+                    validEdges.add(edge);
+                }
+            }
+        }
+        return validEdges;
     }
 }
