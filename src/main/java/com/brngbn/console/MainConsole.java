@@ -78,12 +78,19 @@ public class MainConsole {
         } else if (query.startsWith("parallel ")) {
             timeMeasurer.startTracking(timerName);
             handleParallelCommand(query);
+        } else if (query.equals("simulate-agents")) {
+            handleSimulateAgents(query);
         } else {
             System.out.println("Invalid query.");
             return;
         }
 
         timeMeasurer.calculateAndPrintDuration(timerName);
+    }
+
+    // TODO: implement this functionality
+    private static void handleSimulateAgents(String query) {
+
     }
 
     private static void handleParallelCommand(String query) {
