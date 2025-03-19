@@ -2,7 +2,6 @@ package com.brngbn.agent;
 
 import com.brngbn.graph.GraphImpl;
 import lombok.extern.slf4j.Slf4j;
-
 import java.util.*;
 
 @Slf4j
@@ -27,11 +26,12 @@ public class Agent implements Runnable {
 
     @Override
     public void run() {
+
         Random random = new Random();
         log.info("Agent {} starting run loop at node {}", label, currentNode);
 
         while (!currentNode.equals(destination)) {
-
+            boolean moved = false;
             List<GraphImpl.Edge> validEdges = getValidEdges();
             log.info("Agent {} at node {} found valid moves: {}", label, currentNode, validEdges);
             if (validEdges.isEmpty()) {
@@ -39,19 +39,15 @@ public class Agent implements Runnable {
                 break;
             }
 
-            Collections.shuffle(validEdges, random);
-            boolean moved = false;
+            Collections.shuffle(validEdges, random);            // Only used when there are 2 or more valid edges
 
             for (GraphImpl.Edge edge : validEdges) {
                 String target = edge.neighbor;
-                // Synchronize on the shared occupancy lock to check and update node occupancy.
+
                 synchronized (AgentSimulator.occupancyLock) {
                     if (!AgentSimulator.occupancy.containsKey(target)) {
                         log.info("Agent {} moving from {} to {}", label, currentNode, target);
-                        // Move the agent: free the current node and occupy the target node.
-                        AgentSimulator.occupancy.remove(currentNode);
-                        AgentSimulator.occupancy.put(target, label);
-                        currentNode = target;
+                        occupyValidNode(target);
                         moved = true;
                         break;
                     } else {
@@ -59,32 +55,49 @@ public class Agent implements Runnable {
                     }
                 }
             }
-            if (!moved) {
-                log.info("Agent {} did not move from {} as all valid moves are occupied. Waiting...", label, currentNode);
-                try {
-                    Thread.sleep(1000);
-                } catch (InterruptedException e) {
-                    log.error("Agent {} interrupted while waiting.", label, e);
-                    Thread.currentThread().interrupt();
-                    break;
-                }
-            } else {
 
-                try {
-                    Thread.sleep(1000);
-                } catch (InterruptedException e) {
-                    log.error("Agent {} interrupted after moving.", label, e);
-                    Thread.currentThread().interrupt();
-                    break;
-                }
-            }
+            if (sleepAfterAction(moved)) break;
         }
 
+        handleAgentTermination();
+    }
+
+    private void occupyValidNode(String target) {
+        // Move the agent: free the current node and occupy the target node.
+        AgentSimulator.occupancy.remove(currentNode);
+        AgentSimulator.occupancy.put(target, label);
+        currentNode = target;
+    }
+
+    private boolean sleepAfterAction(boolean moved) {
+        if (!moved) {
+
+            log.info("Agent {} did not move from {} as all valid moves are occupied. Waiting...", label, currentNode);
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                log.error("Agent {} interrupted while waiting.", label, e);
+                Thread.currentThread().interrupt();
+                return true;
+            }
+        } else {
+
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                log.error("Agent {} interrupted after moving.", label, e);
+                Thread.currentThread().interrupt();
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private void handleAgentTermination() {
         if (currentNode.equals(destination)) {
             synchronized (AgentSimulator.occupancyLock) {
                 AgentSimulator.occupancy.remove(currentNode);
-            }
-            log.info("Agent {} reached its destination {} and is removed from the graph.", label, destination);
+            } log.info("Agent {} reached its destination {} and is removed from the graph.", label, destination);
         } else {
             log.info("Agent {} terminated without reaching its destination.", label);
         }
