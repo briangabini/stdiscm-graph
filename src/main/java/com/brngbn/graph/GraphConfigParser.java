@@ -13,14 +13,18 @@ import java.util.Map;
 @Slf4j
 @Getter
 public class GraphConfigParser {
-    // Maps a node to a linked list of weighted edges.
-    private final Map<String, LinkedList<GraphImpl.Edge>> adjacencyList;
+
+    private final Map<String, LinkedList<GraphImpl.Edge>> adjacencyList;        // Maps a node label to a list of weighted edges.
+
+    private final Map<String, String> agentLocations;                           // Maps an agent label to the node it occupies.
 
     private static GraphConfigParser sharedInstance;
+
     private static final String DIRECTORY = "src/main/java/com/brngbn/test_cases/";
 
     public GraphConfigParser() {
         adjacencyList = new HashMap<>();
+        agentLocations = new HashMap<>();
     }
 
     public static void initialize() {
@@ -44,21 +48,36 @@ public class GraphConfigParser {
         try (BufferedReader br = new BufferedReader(new FileReader(DIRECTORY + filename))) {
             String line;
             while ((line = br.readLine()) != null) {
+                if (line.trim().isEmpty()) {
+                    continue;
+                }
+
+                String[] split = line.substring(1).trim().split("\\s+");
                 if (line.startsWith("*")) {
-                    String node = line.substring(2).trim();
-                    adjacencyList.putIfAbsent(node, new LinkedList<>());
+                    if (split.length > 0) {
+                        String nodeLabel = split[0];
+                        adjacencyList.putIfAbsent(nodeLabel, new LinkedList<>());
+
+                        // The second token represents the agent occupying the node.
+                        if (split.length > 1) {
+                            String agentLabel = split[1];
+                            agentLocations.put(agentLabel, nodeLabel);
+                        }
+                    }
                 } else if (line.startsWith("-")) {
-                    String[] parts = line.substring(2).trim().split(" ");
-                    String source = parts[0];
-                    String destination = parts[1];
-                    int weight = Integer.parseInt(parts[2]);
+                    if (split.length >= 3) {
+                        String source = split[0];
+                        String destination = split[1];
+                        int weight = Integer.parseInt(split[2]);
 
-                    // Ensure both nodes exist in the map.
-                    adjacencyList.putIfAbsent(source, new LinkedList<>());
-                    adjacencyList.putIfAbsent(destination, new LinkedList<>());
-
-                    GraphImpl.Edge edge = new GraphImpl.Edge(destination, weight);
-                    adjacencyList.get(source).add(edge);
+                        // Ensure both source and destination nodes exist.
+                        adjacencyList.putIfAbsent(source, new LinkedList<>());
+                        adjacencyList.putIfAbsent(destination, new LinkedList<>());
+                        GraphImpl.Edge edge = new GraphImpl.Edge(destination, weight);
+                        adjacencyList.get(source).add(edge);
+                    } else {
+                        log.error("Invalid edge line format: {}", line);
+                    }
                 }
             }
         }
