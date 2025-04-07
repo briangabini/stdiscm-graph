@@ -1,6 +1,7 @@
 package com.brngbn.console;
 
 import com.brngbn.agent.AgentSimulator;
+import com.brngbn.client.ClientStub;
 import com.brngbn.graph.GraphConfigParser;
 import com.brngbn.graph.GraphImpl;
 import com.brngbn.pathfinder.PathFindingService;
@@ -19,10 +20,17 @@ public class MainConsole {
 
     private static boolean useParallel = false;
 
+    private static final ClientStub clientStub = new ClientStub("localhost", 8080);
+
     private final static String inputDirectory = "src/main/resources/inputs/";
 
-    public static void handleUserQueries(GraphImpl graph) {
+    public static void handleUserQueries(GraphImpl graph) throws IOException {
         asciiHeader();
+
+        // Upload the graph to the server
+        String uploadResult = clientStub.sendGraph(graph);
+        System.out.println("Response from server: " + uploadResult);
+
         Scanner scanner = new Scanner(System.in);
 
         while (true) {
@@ -131,6 +139,8 @@ public class MainConsole {
      *   - "prime-path x y": DFS search for a prime weighted path (tries alternative paths)
      *   - "shortest-path x y": shortest path (Dijkstra’s algorithm)
      *   - "shortest-prime-path x y": shortest path among those with prime total weight
+     *
+     *   RPC Call for "prime-path" and "shortest-path" queries.
      */
     private static void handlePathQuery(String pathQuery, GraphImpl graph) {
         String[] parts = pathQuery.split(" ");
@@ -142,26 +152,35 @@ public class MainConsole {
         String source = parts[1];
         String dest = parts[2];
 
-        PathFindingService service = new PathFindingService();
-        List<GraphImpl.Edge> path = service.findPathQuery(graph, queryType, source, dest, useParallel);
+        if (queryType.equals("prime-path") || queryType.equals("shortest-path")) {
+            // ========================
+            // REMOTE CALL via ClientStub
+            // ========================
+            String serverResponse = clientStub.sendQuery(pathQuery);
+            System.out.println(serverResponse);
 
-        if (path.isEmpty()) {
-            if (queryType.equals("prime-path") || queryType.equals("shortest-prime-path"))
-                System.out.println("No prime path from " + source + " to " + dest);
-            else
-                System.out.println("No path found between " + source + " and " + dest);
-            return;
-        }
+        } else {
+            PathFindingService service = new PathFindingService();
+            List<GraphImpl.Edge> path = service.findPathQuery(graph, queryType, source, dest, useParallel);
 
-        int totalWeight = path.stream().mapToInt(edge -> edge.weight).sum();
-        // For prime queries, our helper methods ensure that the returned path has prime weight.
-        StringBuilder sb = new StringBuilder();
-        sb.append(queryType).append(": ").append(source);
-        for (GraphImpl.Edge edge : path) {
-            sb.append(" -> ").append(edge.neighbor);
+            if (path.isEmpty()) {
+                if (queryType.equals("shortest-prime-path")) {
+                    System.out.println("No prime path from " + source + " to " + dest);
+                } else {
+                    System.out.println("No path found between " + source + " and " + dest);
+                }
+                return;
+            }
+
+            int totalWeight = path.stream().mapToInt(edge -> edge.weight).sum();
+            StringBuilder sb = new StringBuilder();
+            sb.append(queryType).append(": ").append(source);
+            for (GraphImpl.Edge edge : path) {
+                sb.append(" -> ").append(edge.neighbor);
+            }
+            sb.append(" with weight/length = ").append(totalWeight);
+            System.out.println(sb.toString());
         }
-        sb.append(" with weight/length = ").append(totalWeight);
-        System.out.println(sb.toString());
     }
 
     private static void asciiHeader() {

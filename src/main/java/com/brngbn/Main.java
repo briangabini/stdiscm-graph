@@ -23,7 +23,8 @@ public class Main {
 
         GraphImpl graph = new GraphImpl();
         try {
-            graph.readGraphConfig(fileName);
+//            graph.readGraphConfig(fileName);
+            graph.readGraphConfig("ps2/weighted_custom_tc1.txt");
             MainConsole.handleUserQueries(graph);
         } catch (IOException e) {
             e.printStackTrace();

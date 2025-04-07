@@ -4,11 +4,17 @@ import com.brngbn.thread.ThreadPoolManager;
 import lombok.Getter;
 
 import java.io.IOException;
+import java.io.Serial;
+import java.io.Serializable;
 import java.util.*;
 import java.util.concurrent.Callable;
 
 @Getter
-public class GraphImpl {
+public class GraphImpl implements Serializable {
+
+    @Serial
+    private static final long serialVersionUID = 1L;
+
     // Each node maps to a linked list of weighted edges.
     private final Map<String, LinkedList<Edge>> adjacencyList;
 
@@ -86,7 +92,10 @@ public class GraphImpl {
     }
 
     // Represents a weighted edge from the source (implicit) to a neighbor.
-    public static class Edge {
+    public static class Edge implements Serializable {
+        @Serial
+        private static final long serialVersionUID = 1L;
+
         public final String neighbor;
         public final int weight;
 
