@@ -23,7 +23,8 @@ public class Main {
 
         GraphImpl graph = new GraphImpl();
         try {
-            graph.readGraphConfig(fileName);
+//            graph.readGraphConfig(fileName);
+            graph.readGraphConfig("ps3/sample.txt");
             MainConsole.handleUserQueries(graph);
         } catch (IOException e) {
             e.printStackTrace();

@@ -6,41 +6,31 @@ import java.io.PrintWriter;
 import java.net.Socket;
 
 /**
- * Client stub that exposes methods for each type of query.
+ * Client stub that exposes methods for graph queries
  * Internally, these methods open a socket, send the query,
  * wait for a response, and return/print it.
  */
 public class ClientStub {
 
-    private String serverHost;
-    private int serverPort;
+    private final String serverHost;
+    private final int serverPort;
 
     public ClientStub(String serverHost, int serverPort) {
         this.serverHost = serverHost;
         this.serverPort = serverPort;
     }
 
-    /**
-     * Sends a "prime-path a b" query to the server.
-     */
     public String primePath(String a, String b) {
         String query = "prime-path " + a + " " + b;
         return sendQuery(query);
     }
 
-    /**
-     * Sends a "shortest-path a b" query to the server.
-     */
     public String shortestPath(String a, String b) {
         String query = "shortest-path " + a + " " + b;
         return sendQuery(query);
     }
 
-    /**
-     * A general helper method to connect, send a query,
-     * and read the server response.
-     */
-    private String sendQuery(String query) {
+    public String sendQuery(String query) {
         String response = null;
 
         try (Socket socket = new Socket(serverHost, serverPort);
@@ -58,21 +48,5 @@ public class ClientStub {
         }
 
         return response;
-    }
-
-    /**
-     * Simple test usage:
-     *  1. primePath("3", "7")
-     *  2. shortestPath("3", "7")
-     */
-    public static void main(String[] args) {
-        // Adjust host/port as needed
-        ClientStub clientStub = new ClientStub("localhost", 9999);
-
-        String primePathResult = clientStub.primePath("3", "7");
-        System.out.println("Response (prime-path): " + primePathResult);
-
-        String shortestPathResult = clientStub.shortestPath("3", "7");
-        System.out.println("Response (shortest-path): " + shortestPathResult);
     }
 }

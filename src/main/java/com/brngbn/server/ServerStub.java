@@ -1,100 +1,82 @@
 package com.brngbn.server;
 
+import com.brngbn.graph.GraphImpl;
+import com.brngbn.pathfinder.PathFindingService;
+
 import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.List;
 
-/**
- * Server stub that listens for incoming queries.
- * On receiving a query, it parses the command and args,
- * calls the local procedure, and sends back the result.
- */
 public class ServerStub {
 
-    private int port;
+    private final int port;
+    private final GraphImpl graph;
+    private boolean useParallel = true;                 // By default, the server will use threaded logic
 
-    public ServerStub(int port) {
+    public ServerStub(int port, GraphImpl graph) {
         this.port = port;
+        this.graph = graph;
     }
 
     public void startServer() {
         try (ServerSocket serverSocket = new ServerSocket(port)) {
             System.out.println("Server listening on port " + port + "...");
 
-            // Simple loop accepting one client at a time in this example
             while (true) {
                 try (Socket clientSocket = serverSocket.accept();
                      BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
                      PrintWriter out = new PrintWriter(clientSocket.getOutputStream(), true)) {
 
-                    // Read the query (e.g., "prime-path 3 7")
                     String query = in.readLine();
                     if (query == null) {
                         continue;
                     }
-                    System.out.println("Received query: " + query);
+                    System.out.println("Received: " + query);
 
-                    // Parse query
+                    // Currently handling only "prime-path" and "shortest-path" queries``
                     String[] parts = query.split("\\s+");
-                    if (parts.length < 3) {
-                        out.println("Error: malformed query");
-                        continue;
+                    if (parts.length == 3 && (parts[0].equals("prime-path") || parts[0].equals("shortest-path"))) {
+                        String response = handlePathQuery(parts[0], parts[1], parts[2]);
+                        out.println(response);
+                    } else {
+                        out.println("Error: Server only handles prime-path / shortest-path RPC");
                     }
-
-                    String command = parts[0];  // e.g. "prime-path" or "shortest-path"
-                    String a = parts[1];        // e.g. "3"
-                    String b = parts[2];        // e.g. "7"
-
-                    // Dispatch to local procedure
-                    String result;
-                    switch (command) {
-                        case "prime-path":
-                            result = handlePrimePath(a, b);
-                            break;
-                        case "shortest-path":
-                            result = handleShortestPath(a, b);
-                            break;
-                        default:
-                            result = "Error: unknown command '" + command + "'";
-                    }
-
-                    // Send result back to client
-                    out.println(result);
-                    System.out.println("Response sent: " + result);
-
-                } catch (Exception e) {
-                    System.err.println("Error handling client: " + e.getMessage());
-                    e.printStackTrace();
                 }
             }
 
         } catch (Exception e) {
-            System.err.println("Server failed to start: " + e.getMessage());
             e.printStackTrace();
         }
     }
 
-    // Placeholder method for a local parallel procedure for prime-path
-    private String handlePrimePath(String a, String b) {
-        // TODO: Implement your actual parallel algorithm here
-        // For now, just return a mock result
-        return "Computed prime-path for " + a + " -> " + b + " (placeholder result)";
+    private String handlePathQuery(String queryType, String source, String dest) {
+
+        PathFindingService service = new PathFindingService();
+        List<GraphImpl.Edge> path = service.findPathQuery(graph, queryType, source, dest, useParallel);
+
+        if (path.isEmpty()) {
+            return "No path found for " + queryType + " " + source + " " + dest;
+        }
+
+        int totalWeight = path.stream().mapToInt(edge -> edge.weight).sum();
+        StringBuilder sb = new StringBuilder();
+        sb.append(queryType).append(": ").append(source);
+        for (GraphImpl.Edge edge : path) {
+            sb.append(" -> ").append(edge.neighbor);
+        }
+        sb.append(" [weight=").append(totalWeight).append("]");
+        return sb.toString();
     }
 
-    // Placeholder method for a local parallel procedure for shortest-path
-    private String handleShortestPath(String a, String b) {
-        // TODO: Implement your actual parallel algorithm here
-        // For now, just return a mock result
-        return "Computed shortest-path for " + a + " -> " + b + " (placeholder result)";
-    }
+    public static void main(String[] args) throws IOException {
+        GraphImpl graph = new GraphImpl();
+        graph.readGraphConfig("ps3/sample.txt");
 
-    /**
-     * A simple entry point to start the server.
-     */
-    public static void main(String[] args) {
-        ServerStub serverStub = new ServerStub(9999);
-        serverStub.startServer();
+        ServerStub server = new ServerStub(8080, graph);
+        server.startServer();
     }
 }
