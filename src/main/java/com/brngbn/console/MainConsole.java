@@ -24,8 +24,13 @@ public class MainConsole {
 
     private final static String inputDirectory = "src/main/resources/inputs/";
 
-    public static void handleUserQueries(GraphImpl graph) {
+    public static void handleUserQueries(GraphImpl graph) throws IOException {
         asciiHeader();
+
+        // Upload the graph to the server
+        String uploadResult = clientStub.sendGraph(graph);
+        System.out.println("Response from server: " + uploadResult);
+
         Scanner scanner = new Scanner(System.in);
 
         while (true) {
