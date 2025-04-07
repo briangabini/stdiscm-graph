@@ -21,10 +21,11 @@ public class ClientStub {
      */
     public String sendGraph(GraphImpl graph) {
         String serverResponse = null;
-        try (Socket socket = new Socket(serverHost, serverPort)) {
-            ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
+        try (Socket socket = new Socket(serverHost, serverPort);
+             ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
+             ObjectInputStream ois = new ObjectInputStream(socket.getInputStream());
+            ) {
             oos.flush();
-            ObjectInputStream ois = new ObjectInputStream(socket.getInputStream());
 
             // Send the upload command
             oos.writeObject("UPLOAD_GRAPH");
@@ -39,9 +40,6 @@ public class ClientStub {
             if (responseObj instanceof String) {
                 serverResponse = (String) responseObj;
             }
-
-            oos.close();
-            ois.close();
         } catch (Exception e) {
             System.err.println("ClientStub encountered an error while uploading graph: " + e.getMessage());
             e.printStackTrace();
@@ -55,10 +53,11 @@ public class ClientStub {
      */
     public String sendQuery(String query) {
         String response = null;
-        try (Socket socket = new Socket(serverHost, serverPort)) {
-            ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
+        try (Socket socket = new Socket(serverHost, serverPort);
+             ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
+             ObjectInputStream ois = new ObjectInputStream(socket.getInputStream());
+            ) {
             oos.flush();
-            ObjectInputStream ois = new ObjectInputStream(socket.getInputStream());
 
             // Send the query command as an object
             oos.writeObject(query);
@@ -69,9 +68,6 @@ public class ClientStub {
             if (responseObj instanceof String) {
                 response = (String) responseObj;
             }
-
-            oos.close();
-            ois.close();
         } catch (Exception e) {
             System.err.println("ClientStub encountered an error while sending query: " + e.getMessage());
             e.printStackTrace();

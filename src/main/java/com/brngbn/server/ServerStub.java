@@ -20,6 +20,7 @@ public class ServerStub {
     public void startServer() {
         try (ServerSocket serverSocket = new ServerSocket(port)) {
             System.out.println("Server listening on port " + port + "...");
+
             while (true) {
                 try (Socket clientSocket = serverSocket.accept();
                      ObjectOutputStream oos = new ObjectOutputStream(clientSocket.getOutputStream());
@@ -62,8 +63,6 @@ public class ServerStub {
                         oos.writeObject("Error: Expected a String command.");
                         oos.flush();
                     }
-                    oos.close();
-                    ois.close();
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
