@@ -17,6 +17,10 @@ public class Agent implements Runnable {
 
     private final GraphImpl graph;
 
+    private int stuckAttempts = 0;
+
+    private String previousNode = null;
+
     public Agent(String label, String startNode, GraphImpl graph) {
         this.label = label;
         this.currentNode = startNode;
@@ -45,6 +49,23 @@ public class Agent implements Runnable {
                 String target = edge.neighbor;
                 moved = occupyValidNode(target);
                 if (moved) break;
+            }
+
+            if (!moved) {
+                stuckAttempts++;
+                // After 3 consecutive failed attempts, try to backtrack
+                if (stuckAttempts >= 3) {
+                    boolean backtracked = backtrack();
+                    if (backtracked) {
+                        stuckAttempts = 0; // Reset counter on successful backtracking
+                        log.info("Agent {} successfully backtracked to {}.", label, currentNode);
+                        // Longer randomized backoff after backtracking.
+                        randomBackoffSleep();
+                        continue;
+                    }
+                }
+            } else {
+                stuckAttempts = 0;
             }
 
             try {
@@ -76,12 +97,33 @@ public class Agent implements Runnable {
             if (!AgentSimulator.occupancy.containsKey(target)) {
                 log.info("Agent {} moving from {} to {}", label, currentNode, target);
                 // Move the agent: free the current node and occupy the target node.
+                previousNode = currentNode;
                 AgentSimulator.occupancy.remove(currentNode);
                 AgentSimulator.occupancy.put(target, label);
                 currentNode = target;
                 return true;
             } else {
                 log.info("Agent {} cannot move to {} because it is occupied by {}", label, target, AgentSimulator.occupancy.get(target));
+                return false;
+            }
+        }
+    }
+
+    private boolean backtrack() {
+        if (previousNode == null || previousNode.equals(currentNode)) {
+            log.info("Agent {} has no previous node to backtrack to.", label);
+            return false;
+        }
+        synchronized (AgentSimulator.occupancyLock) {
+            if (!AgentSimulator.occupancy.containsKey(previousNode)) {
+                log.info("Agent {} backtracking from {} to previous node {}", label, currentNode, previousNode);
+                AgentSimulator.occupancy.remove(currentNode);
+                AgentSimulator.occupancy.put(previousNode, label);
+                currentNode = previousNode;
+                previousNode = null;
+                return true;
+            } else {
+                log.info("Agent {} attempted to backtrack from {} to {} but it is still occupied.", label, currentNode, previousNode);
                 return false;
             }
         }
@@ -105,6 +147,17 @@ public class Agent implements Runnable {
                 log.error("Agent {} interrupted after moving.", label, e);
                 Thread.currentThread().interrupt();
             }
+        }
+    }
+
+    private void randomBackoffSleep() {
+        try {
+            long sleepTime = 1500 + new Random().nextInt(1000);
+            log.info("Agent {} backing off for {} ms after backtracking.", label, sleepTime);
+            Thread.sleep(sleepTime);
+        } catch (InterruptedException e) {
+            log.error("Agent {} interrupted during backoff sleep.", label, e);
+            Thread.currentThread().interrupt();
         }
     }
 
